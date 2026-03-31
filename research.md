@@ -46,7 +46,10 @@
         * **UI Visualizer:** Shows the key being pressed.
         * **Audio Output:** Runs on a dedicated high-priority thread.
             * SoundFont synthesis using the `MeltySynth` package.
-            * Pipe synth to audio output using the `MiniAudioExNET` package (cross-platform alternative to NAudio).
+            * Pipe synth to audio output using the `NAudio` package (Windows
+              only).
+            * Explore `FluidSynth` to replace both `MeltySynth`+`NAudio` with a
+              simpler package (needs `.dll` distribution`
         * **MIDI Output:**
             * Recording (using `DryWetMidi`).
             * Virtual instrument (via `loopMIDI` or OS native loopback).
