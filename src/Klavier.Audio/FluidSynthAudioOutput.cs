@@ -10,6 +10,7 @@ public class FluidSynthAudioOutput(
     IOptionsMonitor<AudioConfig> audioConfig)
     : IAudioOutput
 {
+    private const int _MidiChannel = 0;
     private readonly Settings _synthSettings = new();
     private Synth? _synth;
     private AudioDriver? _audioDriver;
@@ -39,12 +40,12 @@ public class FluidSynthAudioOutput(
 
     public void OnNoteOn(NoteOnEvent noteOnEvent)
     {
-        _synth?.NoteOn(0, noteOnEvent.Pitch, noteOnEvent.Velocity);
+        _synth?.NoteOn(_MidiChannel, noteOnEvent.Pitch, noteOnEvent.Velocity);
     }
 
     public void OnNoteOff(NoteOffEvent noteOffEvent)
     {
-        _synth?.NoteOff(0, noteOffEvent.Pitch);
+        _synth?.NoteOff(_MidiChannel, noteOffEvent.Pitch);
     }
 
     protected virtual void Dispose(bool disposing)
