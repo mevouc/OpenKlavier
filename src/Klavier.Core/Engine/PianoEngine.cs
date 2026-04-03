@@ -11,15 +11,15 @@ public class PianoEngine : IPianoEngine
     private const int _MidiPitchMax = 127;
 
     private readonly IOptionsMonitor<PlaybackConfig> _playbackConfig;
+    private PlaybackConfig _lastPlaybackConfig;
     private readonly Dictionary<ushort, int> _activeNotes = []; // value is active inputs count (note plays when there's at least one)
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
-    private short _lastTranspose;
 
     public PianoEngine(IOptionsMonitor<PlaybackConfig> playbackConfig)
     {
         _playbackConfig = playbackConfig;
 
-        _lastTranspose = _playbackConfig.CurrentValue.Transpose;
+        _lastPlaybackConfig = _playbackConfig.CurrentValue;
         playbackConfig.OnChange(OnPlaybackConfigChanged); // triggers AllNotesOff if transpose changes
     }
 
@@ -90,11 +90,11 @@ public class PianoEngine : IPianoEngine
 
     private void OnPlaybackConfigChanged(PlaybackConfig newConfig)
     {
-        if (newConfig.Transpose != _lastTranspose)
+        if (newConfig.Transpose != _lastPlaybackConfig.Transpose)
         {
-            _lastTranspose = newConfig.Transpose;
             AllNotesOff();
         }
+        _lastPlaybackConfig = newConfig;
     }
 
     private ushort TransposePitch(ushort pitch)

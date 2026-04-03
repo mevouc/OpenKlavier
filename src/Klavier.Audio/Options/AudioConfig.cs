@@ -2,7 +2,8 @@
 
 public class AudioConfig
 {
-    public string SoundFontPath { get; init; } = "TODO";
+    public string SoundFontPath { get; init; } = "C:\\Users\\mevouc\\Desktop\\GRAND PIANO.sf2";
     public string AudioDriver { get; init; } = "dsound";
-    public ushort Volume { get; init; } = 75;
+    public ushort VolumeInPercent { get; init; } = 60;
+    public float GainFactor => VolumeInPercent / 100f;
 }

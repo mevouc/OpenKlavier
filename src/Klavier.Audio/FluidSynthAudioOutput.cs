@@ -6,16 +6,25 @@ using NFluidsynth;
 
 namespace Klavier.Audio;
 
-public class FluidSynthAudioOutput(
-    IOptionsMonitor<AudioConfig> audioConfig)
-    : IAudioOutput
+public class FluidSynthAudioOutput : IAudioOutput
 {
     private const int _MidiChannel = 0;
     private readonly Settings _synthSettings = new();
+    private readonly IOptionsMonitor<AudioConfig> _audioConfig;
+    private AudioConfig _lastAudioConfig;
     private Synth? _synth;
     private AudioDriver? _audioDriver;
 
     private bool isDisposed;
+
+    public FluidSynthAudioOutput(
+        IOptionsMonitor<AudioConfig> audioConfig)
+    {
+        _audioConfig = audioConfig;
+
+        _lastAudioConfig = _audioConfig.CurrentValue;
+        _audioConfig.OnChange(OnAudioConfigChanged); // dynamically update volume/gain
+    }
 
     public static void ConfigureLogging()
     {
@@ -30,10 +39,11 @@ public class FluidSynthAudioOutput(
 
     public void Initialize()
     {
-        _synthSettings[ConfigurationKeys.AudioDriver].StringValue = audioConfig.CurrentValue.AudioDriver;
+        _synthSettings[ConfigurationKeys.AudioDriver].StringValue = _audioConfig.CurrentValue.AudioDriver;
+        _synthSettings[ConfigurationKeys.SynthGain].DoubleValue = _audioConfig.CurrentValue.GainFactor;
 
         _synth = new(_synthSettings);
-        _synth.LoadSoundFont(audioConfig.CurrentValue.SoundFontPath, true);
+        _synth.LoadSoundFont(_audioConfig.CurrentValue.SoundFontPath, true);
 
         _audioDriver = new(_synthSettings, _synth);
     }
@@ -46,6 +56,15 @@ public class FluidSynthAudioOutput(
     public void OnNoteOff(NoteOffEvent noteOffEvent)
     {
         _synth?.NoteOff(_MidiChannel, noteOffEvent.Pitch);
+    }
+
+    private void OnAudioConfigChanged(AudioConfig newConfig)
+    {
+        if (newConfig.VolumeInPercent != _lastAudioConfig.VolumeInPercent)
+        {
+            _synth?.Gain = newConfig.GainFactor;
+        }
+        _lastAudioConfig = newConfig;
     }
 
     protected virtual void Dispose(bool disposing)
