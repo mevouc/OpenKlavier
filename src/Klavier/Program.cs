@@ -4,6 +4,8 @@ using Klavier.Core.Engine;
 using Klavier.Core.Options;
 using Klavier.Core.Ports;
 using Klavier.UI;
+using Klavier.UI.Options;
+using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +18,11 @@ IHost host = Host.CreateDefaultBuilder(args)
         IConfiguration configuration = context.Configuration;
 
         services.Configure<PlaybackConfig>(configuration.GetSection("Playback"));
+        services.Configure<UIConfig>(configuration.GetSection("UI"));
         services.AddFluidSynthAudio(configuration.GetSection("Audio"));
         services.AddSingleton<IPianoEngine, PianoEngine>();
+        services.AddSingleton<PianoViewModel>();
+        services.AddTransient<PianoView>();
         services.AddTransient<MainWindow>();
     })
     .Build();
@@ -28,6 +33,10 @@ audio.Initialize();
 
 IPianoEngine engine = host.Services.GetRequiredService<IPianoEngine>();
 engine.RegisterHandler(audio);
+
+// Register UI as a note event handler (key highlighting)
+PianoViewModel pianoViewModel = host.Services.GetRequiredService<PianoViewModel>();
+engine.RegisterHandler(pianoViewModel);
 
 AppBuilder.Configure(() => new App(() => host.Services.GetRequiredService<MainWindow>()))
     .UsePlatformDetect()

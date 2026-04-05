@@ -1,8 +1,10 @@
 using System.Collections.Frozen;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using Klavier.Core.Engine;
 using Klavier.Core.Primitives;
+using Klavier.UI.Theme;
 
 namespace Klavier.UI.Views;
 
@@ -10,22 +12,25 @@ public class MainWindow : Window
 {
     private static readonly FrozenDictionary<PhysicalKey, NotePitch> _KeyToNote = new Dictionary<PhysicalKey, NotePitch>
     {
-        [PhysicalKey.A] = new(60),  // C4
-        [PhysicalKey.S] = new(62),  // D4
-        [PhysicalKey.D] = new(64),  // E4
-        [PhysicalKey.F] = new(65),  // F4
+        [PhysicalKey.T] = new(60),  // C4
+        [PhysicalKey.Y] = new(62),  // D4
+        [PhysicalKey.U] = new(64),  // E4
+        [PhysicalKey.I] = new(65),  // F4
     }.ToFrozenDictionary();
 
     private readonly IPianoEngine _pianoEngine;
     private readonly HashSet<PhysicalKey> _heldKeys = []; // physical keyboard scan codes, based on QWERTY mapping
 
-    public MainWindow(IPianoEngine pianoEngine)
+    public MainWindow(IPianoEngine pianoEngine, PianoView pianoView)
     {
         _pianoEngine = pianoEngine;
 
         Title = "Klavier";
-        Width = 800;
-        Height = 200;
+        Width = 1000;
+        Height = 300;
+        Background = new SolidColorBrush(KlavierTheme.AppBackground);
+
+        Content = pianoView;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
