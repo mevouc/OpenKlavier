@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Klavier.Core.Engine;
 using Klavier.Core.Primitives;
 
 namespace Klavier.UI.ViewModels;
@@ -7,7 +8,8 @@ public partial class PianoKeyViewModel(
     NotePitch pitch,
     bool isBlack,
     string keyLabel,
-    string noteLabel)
+    string noteLabel,
+    IPianoEngine pianoEngine)
     : ObservableObject
 {
     public NotePitch Pitch { get; } = pitch;
@@ -19,4 +21,14 @@ public partial class PianoKeyViewModel(
 
     [ObservableProperty]
     private string _noteLabel = noteLabel;
+
+    public void Press()
+    {
+        pianoEngine.NoteOn(Pitch);
+    }
+
+    public void Release()
+    {
+        pianoEngine.NoteOff(Pitch);
+    }
 }

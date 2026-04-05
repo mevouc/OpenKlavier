@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using Avalonia.Threading;
+using Klavier.Core.Engine;
 using Klavier.Core.Events;
 using Klavier.Core.Music;
 using Klavier.Core.Ports;
@@ -27,7 +28,7 @@ public class PianoViewModel : INoteEventHandler
 
     public IReadOnlyList<PianoKeyViewModel> Keys { get; }
 
-    public PianoViewModel(IOptionsMonitor<UIConfig> uiConfig)
+    public PianoViewModel(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig)
     {
         _uiConfig = uiConfig;
         _uiConfig.OnChange(OnUIConfigChanged);
@@ -45,7 +46,7 @@ public class PianoViewModel : INoteEventHandler
             string keyLabel = keyLabels.TryGetValue(pitch, out string? label) ? label : "";
             string noteLabel = NoteNames.GetNoteName(notePitch, style);
 
-            keys.Add(new PianoKeyViewModel(notePitch, isBlack, keyLabel, noteLabel));
+            keys.Add(new PianoKeyViewModel(notePitch, isBlack, keyLabel, noteLabel, pianoEngine));
         }
 
         Keys = keys;

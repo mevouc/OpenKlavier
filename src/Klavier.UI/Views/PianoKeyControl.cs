@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.UI.Theme;
@@ -59,6 +60,21 @@ public class PianoKeyControl : Border
         UpdateBackground();
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+        PointerPressed += OnPointerPressed;
+        PointerReleased += OnPointerReleased;
+    }
+
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _viewModel.Press();
+        e.Handled = true;
+    }
+
+    private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _viewModel.Release();
+        e.Handled = true;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
