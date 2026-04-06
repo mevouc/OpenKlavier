@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Klavier.Core.Primitives;
 using Klavier.UI.ViewModels;
 
 namespace Klavier.UI.Views;
@@ -30,9 +31,10 @@ public class PianoView : Panel
             {
                 _whiteKeys.Add(control);
 
-                // C, D, F, G, A have sharps (note indices 0, 2, 5, 7, 9)
-                int noteIndex = keyViewModel.Pitch.NoteIndex;
-                _whiteKeyHasSharp.Add(noteIndex is 0 or 2 or 5 or 7 or 9);
+                // Check if the next semitone is an accidental (sharp)
+                bool hasSharp = keyViewModel.Pitch.Value < NotePitch.MaxValue
+                    && new NotePitch((ushort)(keyViewModel.Pitch.Value + 1)).IsAccidental;
+                _whiteKeyHasSharp.Add(hasSharp);
             }
         }
 

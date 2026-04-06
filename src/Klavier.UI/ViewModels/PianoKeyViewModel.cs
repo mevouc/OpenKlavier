@@ -6,7 +6,6 @@ namespace Klavier.UI.ViewModels;
 
 public partial class PianoKeyViewModel(
     NotePitch pitch,
-    bool isBlack,
     string keyLabel,
     string noteLabel,
     bool showKeyLabel,
@@ -15,7 +14,7 @@ public partial class PianoKeyViewModel(
     : ObservableObject
 {
     public NotePitch Pitch { get; } = pitch;
-    public bool IsBlack { get; } = isBlack;
+    public bool IsBlack => Pitch.IsAccidental;
     public string KeyLabel { get; } = keyLabel;
 
     [ObservableProperty]

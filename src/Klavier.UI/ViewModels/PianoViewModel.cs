@@ -15,8 +15,6 @@ public class PianoViewModel : INoteEventHandler
     private const ushort _FirstPitch = 36;  // C2
     private const ushort _LastPitch = 96;   // C7
 
-    private static readonly int[] _BlackNoteIndices = [1, 3, 6, 8, 10];
-
     // QWERTY key labels: white key label → Shift+label for the sharp above
     private static readonly string[] _DigitRow = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
     private static readonly string[] _TopRow = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];
@@ -40,14 +38,12 @@ public class PianoViewModel : INoteEventHandler
 
         for (ushort pitch = _FirstPitch; pitch <= _LastPitch; pitch++)
         {
-            int noteIndex = pitch % NotePitch.NotesPerOctave;
-            bool isBlack = _BlackNoteIndices.Contains(noteIndex);
             NotePitch notePitch = new(pitch);
             string keyLabel = keyLabels.TryGetValue(pitch, out string? label) ? label : "";
             string noteLabel = NoteNames.GetNoteName(notePitch, config.NoteNameStyle);
 
             keys.Add(new PianoKeyViewModel(
-                notePitch, isBlack, keyLabel, noteLabel,
+                notePitch, keyLabel, noteLabel,
                 config.ShowKeyLabels, config.ShowNoteLabels, pianoEngine));
         }
 
@@ -103,10 +99,9 @@ public class PianoViewModel : INoteEventHandler
 
         while (rowIndex < row.Length && pitch <= _LastPitch)
         {
-            int noteIndex = pitch % NotePitch.NotesPerOctave;
-            bool isBlack = _BlackNoteIndices.Contains(noteIndex);
+            NotePitch current = new(pitch);
 
-            if (isBlack)
+            if (current.IsAccidental)
             {
                 // Black key gets Shift+previous white key label
                 labels[pitch] = $"⇧{row[rowIndex - 1]}";
@@ -122,10 +117,9 @@ public class PianoViewModel : INoteEventHandler
                 // Check if next note is a black key — assign its label too
                 if (pitch <= _LastPitch)
                 {
-                    int nextNoteIndex = pitch % NotePitch.NotesPerOctave;
-                    bool nextIsBlack = _BlackNoteIndices.Contains(nextNoteIndex);
+                    NotePitch next = new(pitch);
 
-                    if (nextIsBlack)
+                    if (next.IsAccidental)
                     {
                         labels[pitch] = $"⇧{row[rowIndex - 1]}";
                         pitch++;
