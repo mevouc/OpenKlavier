@@ -6,4 +6,5 @@ public class PlaybackConfig
 {
     public NoteVelocity Velocity { get; init; } = new(100);
     public short Transpose { get; init; } = 0;
+    public SustainMode SustainMode { get; init; } = SustainMode.Hold;
 }

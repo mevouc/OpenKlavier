@@ -8,5 +8,7 @@ public interface IPianoEngine
     void RegisterHandler(INoteEventHandler noteEventHandler);
     void NoteOn(NotePitch pitch);
     void NoteOff(NotePitch pitch);
+    void SustainOn();
+    void SustainOff();
     void AllNotesOff();
 }

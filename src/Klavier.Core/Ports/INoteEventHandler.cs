@@ -6,4 +6,5 @@ public interface INoteEventHandler
 {
     void OnNoteOn(NoteOnEvent noteOnEvent);
     void OnNoteOff(NoteOffEvent noteOffEvent);
+    void OnSustainChanged(bool isOn);
 }

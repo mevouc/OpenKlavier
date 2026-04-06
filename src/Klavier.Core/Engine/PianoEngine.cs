@@ -14,6 +14,7 @@ public class PianoEngine : IPianoEngine
     private PlaybackConfig _lastPlaybackConfig;
     private readonly Dictionary<NotePitch, int> _activeNotes = []; // value is active inputs count (note plays when there's at least one)
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
+    private bool _isSustainOn;
 
     public PianoEngine(
         IOptionsMonitor<PlaybackConfig> playbackConfig,
@@ -86,8 +87,42 @@ public class PianoEngine : IPianoEngine
         }
     }
 
+    public void SustainOn()
+    {
+        if (_isSustainOn)
+        {
+            return;
+        }
+
+        _isSustainOn = true;
+        _logger.LogInformation("Sustain on");
+
+        foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
+        {
+            noteEventHandler.OnSustainChanged(true);
+        }
+    }
+
+    public void SustainOff()
+    {
+        if (!_isSustainOn)
+        {
+            return;
+        }
+
+        _isSustainOn = false;
+        _logger.LogInformation("Sustain off");
+
+        foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
+        {
+            noteEventHandler.OnSustainChanged(false);
+        }
+    }
+
     public void AllNotesOff()
     {
+        SustainOff();
+
         foreach ((NotePitch transposedPitch, int _) in _activeNotes)
         {
             NoteOffEvent noteOffEvent = new(transposedPitch);
