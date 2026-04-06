@@ -33,7 +33,7 @@ public class PianoViewModel : INoteEventHandler
         _uiConfig = uiConfig;
         _uiConfig.OnChange(OnUIConfigChanged);
 
-        NoteNameStyle style = _uiConfig.CurrentValue.NoteNameStyle;
+        UIConfig config = _uiConfig.CurrentValue;
         Dictionary<ushort, string> keyLabels = BuildKeyLabels();
 
         List<PianoKeyViewModel> keys = [];
@@ -44,9 +44,11 @@ public class PianoViewModel : INoteEventHandler
             bool isBlack = _BlackNoteIndices.Contains(noteIndex);
             NotePitch notePitch = new(pitch);
             string keyLabel = keyLabels.TryGetValue(pitch, out string? label) ? label : "";
-            string noteLabel = NoteNames.GetNoteName(notePitch, style);
+            string noteLabel = NoteNames.GetNoteName(notePitch, config.NoteNameStyle);
 
-            keys.Add(new PianoKeyViewModel(notePitch, isBlack, keyLabel, noteLabel, pianoEngine));
+            keys.Add(new PianoKeyViewModel(
+                notePitch, isBlack, keyLabel, noteLabel,
+                config.ShowKeyLabels, config.ShowNoteLabels, pianoEngine));
         }
 
         Keys = keys;
@@ -71,13 +73,13 @@ public class PianoViewModel : INoteEventHandler
 
     private void OnUIConfigChanged(UIConfig newConfig)
     {
-        NoteNameStyle style = newConfig.NoteNameStyle;
-
         Dispatcher.UIThread.Post(() =>
         {
             foreach (PianoKeyViewModel key in Keys)
             {
-                key.NoteLabel = NoteNames.GetNoteName(key.Pitch, style);
+                key.NoteLabel = NoteNames.GetNoteName(key.Pitch, newConfig.NoteNameStyle);
+                key.ShowKeyLabel = newConfig.ShowKeyLabels;
+                key.ShowNoteLabel = newConfig.ShowNoteLabels;
             }
         });
     }

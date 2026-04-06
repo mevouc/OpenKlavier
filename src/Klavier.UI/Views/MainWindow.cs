@@ -4,7 +4,9 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Klavier.Core.Engine;
 using Klavier.Core.Primitives;
+using Klavier.UI.Options;
 using Klavier.UI.Theme;
+using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
 
@@ -21,7 +23,7 @@ public class MainWindow : Window
     private readonly IPianoEngine _pianoEngine;
     private readonly HashSet<PhysicalKey> _heldKeys = []; // physical keyboard scan codes, based on QWERTY mapping
 
-    public MainWindow(IPianoEngine pianoEngine, PianoView pianoView)
+    public MainWindow(IPianoEngine pianoEngine, PianoView pianoView, IOptionsMonitor<UIConfig> uiConfig)
     {
         _pianoEngine = pianoEngine;
 
@@ -29,6 +31,9 @@ public class MainWindow : Window
         Width = 1000;
         Height = 300;
         Background = new SolidColorBrush(KlavierTheme.AppBackground);
+        Topmost = uiConfig.CurrentValue.Topmost;
+
+        uiConfig.OnChange(config => Topmost = config.Topmost);
 
         Content = pianoView;
     }

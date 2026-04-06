@@ -9,6 +9,8 @@ public partial class PianoKeyViewModel(
     bool isBlack,
     string keyLabel,
     string noteLabel,
+    bool showKeyLabel,
+    bool showNoteLabel,
     IPianoEngine pianoEngine)
     : ObservableObject
 {
@@ -21,6 +23,12 @@ public partial class PianoKeyViewModel(
 
     [ObservableProperty]
     private string _noteLabel = noteLabel;
+
+    [ObservableProperty]
+    private bool _showKeyLabel = showKeyLabel;
+
+    [ObservableProperty]
+    private bool _showNoteLabel = showNoteLabel;
 
     public void Press()
     {

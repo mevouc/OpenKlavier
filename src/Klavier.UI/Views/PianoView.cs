@@ -31,7 +31,7 @@ public class PianoView : Panel
                 _whiteKeys.Add(control);
 
                 // C, D, F, G, A have sharps (note indices 0, 2, 5, 7, 9)
-                int noteIndex = keyViewModel.Pitch.Index;
+                int noteIndex = keyViewModel.Pitch.NoteIndex;
                 _whiteKeyHasSharp.Add(noteIndex is 0 or 2 or 5 or 7 or 9);
             }
         }

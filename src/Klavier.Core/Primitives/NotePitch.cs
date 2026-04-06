@@ -14,5 +14,6 @@ public readonly record struct NotePitch(ushort Value)
         ? Value
         : throw new ArgumentOutOfRangeException(nameof(Value), Value, "Pitch must be between 0 and 127.");
 
-    public int Index => Value % NotesPerOctave;
+    public int NoteIndex => Value % NotesPerOctave;
+    public int SpnOctave => (Value / NotesPerOctave) - 1;
 }

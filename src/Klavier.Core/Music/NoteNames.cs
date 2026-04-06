@@ -11,26 +11,27 @@ public static class NoteNames
 
     public static string GetNoteName(NotePitch pitch, NoteNameStyle style)
     {
-        int noteIndex = pitch.Index;
-        int spnOctave = pitch.SpnOctave;
-
         return style switch
         {
-            NoteNameStyle.Scientific => FormatScientific(noteIndex, spnOctave),
-            NoteNameStyle.Solfege => FormatSolfege(noteIndex, spnOctave),
-            NoteNameStyle.Helmholtz => FormatHelmholtz(noteIndex, spnOctave),
+            NoteNameStyle.Scientific => FormatScientific(pitch),
+            NoteNameStyle.Solfege => FormatSolfege(pitch),
+            NoteNameStyle.Helmholtz => FormatHelmholtz(pitch),
             _ => throw new ArgumentOutOfRangeException(nameof(style), style, null),
         };
     }
 
-    private static string FormatScientific(int noteIndex, int spnOctave)
+    private static string FormatScientific(NotePitch pitch)
     {
+        int noteIndex = pitch.NoteIndex;
+        int spnOctave = pitch.SpnOctave;
+
         return $"{_ScientificNames[noteIndex]}{spnOctave}";
     }
 
-    private static string FormatSolfege(int noteIndex, int spnOctave)
+    private static string FormatSolfege(NotePitch pitch)
     {
-        int solfegeOctave = spnOctave - 1;
+        int noteIndex = pitch.NoteIndex;
+        int solfegeOctave = pitch.SpnOctave - 1;
 
         return $"{_SolfegeNames[noteIndex]}{FormatSubscriptNumber(solfegeOctave)}";
     }
@@ -56,8 +57,11 @@ public static class NoteNames
         return new string(subscript);
     }
 
-    private static string FormatHelmholtz(int noteIndex, int spnOctave)
+    private static string FormatHelmholtz(NotePitch pitch)
     {
+        int noteIndex = pitch.NoteIndex;
+        int spnOctave = pitch.SpnOctave;
+
         string noteName = _ScientificNames[noteIndex];
 
         if (spnOctave <= 2)

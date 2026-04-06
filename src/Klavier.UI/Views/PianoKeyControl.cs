@@ -37,7 +37,7 @@ public class PianoKeyControl : Border
         {
             Text = viewModel.KeyLabel,
             Foreground = textBrush,
-            FontSize = 10,
+            FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
 
@@ -45,7 +45,7 @@ public class PianoKeyControl : Border
         {
             Text = viewModel.NoteLabel,
             Foreground = textBrush,
-            FontSize = 9,
+            FontSize = 10,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
 
@@ -56,6 +56,9 @@ public class PianoKeyControl : Border
             Spacing = 2,
             Children = { _keyLabelText, _noteLabelText },
         };
+
+        _keyLabelText.IsVisible = viewModel.ShowKeyLabel;
+        _noteLabelText.IsVisible = viewModel.ShowNoteLabel;
 
         UpdateBackground();
 
@@ -79,13 +82,20 @@ public class PianoKeyControl : Border
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(PianoKeyViewModel.IsPressed))
+        switch (e.PropertyName)
         {
-            UpdateBackground();
-        }
-        else if (e.PropertyName == nameof(PianoKeyViewModel.NoteLabel))
-        {
-            _noteLabelText.Text = _viewModel.NoteLabel;
+            case nameof(PianoKeyViewModel.IsPressed):
+                UpdateBackground();
+                break;
+            case nameof(PianoKeyViewModel.NoteLabel):
+                _noteLabelText.Text = _viewModel.NoteLabel;
+                break;
+            case nameof(PianoKeyViewModel.ShowKeyLabel):
+                _keyLabelText.IsVisible = _viewModel.ShowKeyLabel;
+                break;
+            case nameof(PianoKeyViewModel.ShowNoteLabel):
+                _noteLabelText.IsVisible = _viewModel.ShowNoteLabel;
+                break;
         }
     }
 
