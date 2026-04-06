@@ -38,6 +38,11 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Topmost = config.Topmost);
 
+        if (uiConfig.CurrentValue.SustainMode == SustainMode.InvertedHold)
+        {
+            _pianoEngine.SustainOn();
+        }
+
         Content = pianoView;
     }
 
@@ -77,22 +82,27 @@ public class MainWindow : Window
     {
         SustainMode mode = _uiConfig.CurrentValue.SustainMode;
 
-        if (mode == SustainMode.Hold)
+        switch (mode)
         {
-            _pianoEngine.SustainOn();
-        }
-        else // Toggle
-        {
-            _isSustainToggled = !_isSustainToggled;
-
-            if (_isSustainToggled)
-            {
+            case SustainMode.Hold:
                 _pianoEngine.SustainOn();
-            }
-            else
-            {
+                break;
+            case SustainMode.InvertedHold:
                 _pianoEngine.SustainOff();
-            }
+                break;
+            case SustainMode.Toggle:
+                _isSustainToggled = !_isSustainToggled;
+
+                if (_isSustainToggled)
+                {
+                    _pianoEngine.SustainOn();
+                }
+                else
+                {
+                    _pianoEngine.SustainOff();
+                }
+
+                break;
         }
     }
 
@@ -100,9 +110,14 @@ public class MainWindow : Window
     {
         SustainMode mode = _uiConfig.CurrentValue.SustainMode;
 
-        if (mode == SustainMode.Hold)
+        switch (mode)
         {
-            _pianoEngine.SustainOff();
+            case SustainMode.Hold:
+                _pianoEngine.SustainOff();
+                break;
+            case SustainMode.InvertedHold:
+                _pianoEngine.SustainOn();
+                break;
         }
     }
 }
