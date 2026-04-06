@@ -50,10 +50,7 @@ public class PianoEngine : IPianoEngine
 
             _logger.LogInformation("Playing note {Pitch}", transposedPitch);
 
-            foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
-            {
-                noteEventHandler.OnNoteOn(noteOnEvent);
-            }
+            NotifyHandlers(handler => handler.OnNoteOn(noteOnEvent));
         }
         else // note already active
         {
@@ -69,14 +66,9 @@ public class PianoEngine : IPianoEngine
         {
             if (activeCount == 1)
             {
-                NoteOffEvent noteOffEvent = new(transposedPitch);
-
                 _logger.LogInformation("Releasing note {Pitch}", transposedPitch);
 
-                foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
-                {
-                    noteEventHandler.OnNoteOff(noteOffEvent);
-                }
+                NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(transposedPitch)));
 
                 _activeNotes.Remove(transposedPitch); // notes with 0 active play are removed from dictionary
             }
@@ -96,11 +88,7 @@ public class PianoEngine : IPianoEngine
 
         _isSustainOn = true;
         _logger.LogInformation("Sustain on");
-
-        foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
-        {
-            noteEventHandler.OnSustainChanged(true);
-        }
+        NotifyHandlers(handler => handler.OnSustainChanged(true));
     }
 
     public void SustainOff()
@@ -112,11 +100,7 @@ public class PianoEngine : IPianoEngine
 
         _isSustainOn = false;
         _logger.LogInformation("Sustain off");
-
-        foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
-        {
-            noteEventHandler.OnSustainChanged(false);
-        }
+        NotifyHandlers(handler => handler.OnSustainChanged(false));
     }
 
     public void AllNotesOff()
@@ -125,12 +109,7 @@ public class PianoEngine : IPianoEngine
 
         foreach ((NotePitch transposedPitch, int _) in _activeNotes)
         {
-            NoteOffEvent noteOffEvent = new(transposedPitch);
-
-            foreach (INoteEventHandler noteEventHandler in _noteEventHandlers)
-            {
-                noteEventHandler.OnNoteOff(noteOffEvent);
-            }
+            NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(transposedPitch)));
         }
 
         _activeNotes.Clear();
@@ -143,6 +122,14 @@ public class PianoEngine : IPianoEngine
             AllNotesOff();
         }
         _lastPlaybackConfig = newConfig;
+    }
+
+    private void NotifyHandlers(Action<INoteEventHandler> action)
+    {
+        foreach (INoteEventHandler handler in _noteEventHandlers)
+        {
+            action(handler);
+        }
     }
 
     private NotePitch TransposePitch(NotePitch pitch)
