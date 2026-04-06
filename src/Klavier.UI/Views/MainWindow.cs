@@ -21,11 +21,14 @@ public class MainWindow : Window
     }.ToFrozenDictionary();
 
     private readonly IPianoEngine _pianoEngine;
+    private readonly IOptionsMonitor<UIConfig> _uiConfig;
     private readonly HashSet<PhysicalKey> _heldKeys = []; // physical keyboard scan codes, based on QWERTY mapping
+    private bool _isSustainToggled;
 
     public MainWindow(IPianoEngine pianoEngine, PianoView pianoView, IOptionsMonitor<UIConfig> uiConfig)
     {
         _pianoEngine = pianoEngine;
+        _uiConfig = uiConfig;
 
         Title = "Klavier";
         Width = 1000;
@@ -40,7 +43,12 @@ public class MainWindow : Window
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        if (_KeyToNote.TryGetValue(e.PhysicalKey, out NotePitch note) && _heldKeys.Add(e.PhysicalKey))
+        if (e.PhysicalKey == PhysicalKey.Space)
+        {
+            HandleSustainKeyDown();
+            e.Handled = true;
+        }
+        else if (_KeyToNote.TryGetValue(e.PhysicalKey, out NotePitch note) && _heldKeys.Add(e.PhysicalKey))
         {
             _pianoEngine.NoteOn(note);
             e.Handled = true;
@@ -51,12 +59,50 @@ public class MainWindow : Window
 
     protected override void OnKeyUp(KeyEventArgs e)
     {
-        if (_KeyToNote.TryGetValue(e.PhysicalKey, out NotePitch note) && _heldKeys.Remove(e.PhysicalKey))
+        if (e.PhysicalKey == PhysicalKey.Space)
+        {
+            HandleSustainKeyUp();
+            e.Handled = true;
+        }
+        else if (_KeyToNote.TryGetValue(e.PhysicalKey, out NotePitch note) && _heldKeys.Remove(e.PhysicalKey))
         {
             _pianoEngine.NoteOff(note);
             e.Handled = true;
         }
 
         base.OnKeyUp(e);
+    }
+
+    private void HandleSustainKeyDown()
+    {
+        SustainMode mode = _uiConfig.CurrentValue.SustainMode;
+
+        if (mode == SustainMode.Hold)
+        {
+            _pianoEngine.SustainOn();
+        }
+        else // Toggle
+        {
+            _isSustainToggled = !_isSustainToggled;
+
+            if (_isSustainToggled)
+            {
+                _pianoEngine.SustainOn();
+            }
+            else
+            {
+                _pianoEngine.SustainOff();
+            }
+        }
+    }
+
+    private void HandleSustainKeyUp()
+    {
+        SustainMode mode = _uiConfig.CurrentValue.SustainMode;
+
+        if (mode == SustainMode.Hold)
+        {
+            _pianoEngine.SustainOff();
+        }
     }
 }

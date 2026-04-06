@@ -8,4 +8,5 @@ public class UIConfig
     public bool ShowKeyLabels { get; init; } = true;
     public bool ShowNoteLabels { get; init; } = true;
     public NoteNameStyle NoteNameStyle { get; init; } = NoteNameStyle.Scientific;
+    public SustainMode SustainMode { get; init; } = SustainMode.Hold;
 }
