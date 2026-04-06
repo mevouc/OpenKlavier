@@ -10,6 +10,9 @@ namespace Klavier.Audio;
 public class FluidSynthAudioOutput : IAudioOutput
 {
     private const int _MidiChannel = 0;
+    private const int _SustainController = 64; // MIDI CC64
+    private const int _ControllerOn = 127;
+    private const int _ControllerOff = 0;
     private readonly Settings _synthSettings;
     private readonly IOptionsMonitor<AudioConfig> _audioConfig;
     private AudioConfig _lastAudioConfig;
@@ -78,6 +81,11 @@ public class FluidSynthAudioOutput : IAudioOutput
     public void OnNoteOff(NoteOffEvent noteOffEvent)
     {
         _synth?.NoteOff(_MidiChannel, noteOffEvent.Pitch.Value);
+    }
+
+    public void OnSustainChanged(bool isOn)
+    {
+        _synth?.CC(_MidiChannel, _SustainController, isOn ? _ControllerOn : _ControllerOff);
     }
 
     private void OnAudioConfigChanged(AudioConfig newConfig)

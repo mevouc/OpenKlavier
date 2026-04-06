@@ -67,6 +67,11 @@ public class PianoViewModel : INoteEventHandler
         }
     }
 
+    public void OnSustainChanged(bool isOn)
+    {
+        // UI doesn't visually reflect sustain state for now
+    }
+
     private void OnUIConfigChanged(UIConfig newConfig)
     {
         Dispatcher.UIThread.Post(() =>
