@@ -1,9 +1,7 @@
-using System.Collections.Frozen;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Klavier.Core.Engine;
-using Klavier.Core.Primitives;
+using Klavier.UI.Input;
 using Klavier.UI.Options;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
@@ -12,23 +10,14 @@ namespace Klavier.UI.Views;
 
 public class MainWindow : Window
 {
-    private static readonly FrozenDictionary<PhysicalKey, NotePitch> _KeyToNote = new Dictionary<PhysicalKey, NotePitch>
-    {
-        [PhysicalKey.T] = new(60),  // C4
-        [PhysicalKey.Y] = new(62),  // D4
-        [PhysicalKey.U] = new(64),  // E4
-        [PhysicalKey.I] = new(65),  // F4
-    }.ToFrozenDictionary();
+    private readonly KeyboardInputHandler _keyboardInput;
 
-    private readonly IPianoEngine _pianoEngine;
-    private readonly IOptionsMonitor<UIConfig> _uiConfig;
-    private readonly HashSet<PhysicalKey> _heldKeys = []; // physical keyboard scan codes, based on QWERTY mapping
-    private bool _isSustainToggled;
-
-    public MainWindow(IPianoEngine pianoEngine, PianoView pianoView, IOptionsMonitor<UIConfig> uiConfig)
+    public MainWindow(
+        KeyboardInputHandler keyboardInput,
+        PianoView pianoView,
+        IOptionsMonitor<UIConfig> uiConfig)
     {
-        _pianoEngine = pianoEngine;
-        _uiConfig = uiConfig;
+        _keyboardInput = keyboardInput;
 
         Title = "Klavier";
         Width = 1000;
@@ -38,86 +27,20 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Topmost = config.Topmost);
 
-        if (uiConfig.CurrentValue.SustainMode == SustainMode.InvertedHold)
-        {
-            _pianoEngine.SustainOn();
-        }
-
         Content = pianoView;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        if (e.PhysicalKey == PhysicalKey.Space)
-        {
-            HandleSustainKeyDown();
-            e.Handled = true;
-        }
-        else if (_KeyToNote.TryGetValue(e.PhysicalKey, out NotePitch note) && _heldKeys.Add(e.PhysicalKey))
-        {
-            _pianoEngine.NoteOn(note);
-            e.Handled = true;
-        }
+        e.Handled = _keyboardInput.HandleKeyDown(e.PhysicalKey);
 
         base.OnKeyDown(e);
     }
 
     protected override void OnKeyUp(KeyEventArgs e)
     {
-        if (e.PhysicalKey == PhysicalKey.Space)
-        {
-            HandleSustainKeyUp();
-            e.Handled = true;
-        }
-        else if (_KeyToNote.TryGetValue(e.PhysicalKey, out NotePitch note) && _heldKeys.Remove(e.PhysicalKey))
-        {
-            _pianoEngine.NoteOff(note);
-            e.Handled = true;
-        }
+        e.Handled = _keyboardInput.HandleKeyUp(e.PhysicalKey);
 
         base.OnKeyUp(e);
-    }
-
-    private void HandleSustainKeyDown()
-    {
-        SustainMode mode = _uiConfig.CurrentValue.SustainMode;
-
-        switch (mode)
-        {
-            case SustainMode.Hold:
-                _pianoEngine.SustainOn();
-                break;
-            case SustainMode.InvertedHold:
-                _pianoEngine.SustainOff();
-                break;
-            case SustainMode.Toggle:
-                _isSustainToggled = !_isSustainToggled;
-
-                if (_isSustainToggled)
-                {
-                    _pianoEngine.SustainOn();
-                }
-                else
-                {
-                    _pianoEngine.SustainOff();
-                }
-
-                break;
-        }
-    }
-
-    private void HandleSustainKeyUp()
-    {
-        SustainMode mode = _uiConfig.CurrentValue.SustainMode;
-
-        switch (mode)
-        {
-            case SustainMode.Hold:
-                _pianoEngine.SustainOff();
-                break;
-            case SustainMode.InvertedHold:
-                _pianoEngine.SustainOn();
-                break;
-        }
     }
 }
