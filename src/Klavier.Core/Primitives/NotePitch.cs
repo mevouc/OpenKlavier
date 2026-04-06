@@ -8,8 +8,11 @@ public readonly record struct NotePitch(ushort Value)
 {
     public const int MinValue = ushort.MinValue; // 0
     public const int MaxValue = 127;
+    public const int NotesPerOctave = 12;
 
     public ushort Value { get; } = Value <= MaxValue
         ? Value
         : throw new ArgumentOutOfRangeException(nameof(Value), Value, "Pitch must be between 0 and 127.");
+
+    public int Index => Value % NotesPerOctave;
 }

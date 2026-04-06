@@ -12,8 +12,8 @@ namespace Klavier.UI.ViewModels;
 
 public class PianoViewModel : INoteEventHandler
 {
-    private const int _FirstPitch = 36;  // C2
-    private const int _LastPitch = 96;   // C7
+    private const ushort _FirstPitch = 36;  // C2
+    private const ushort _LastPitch = 96;   // C7
 
     private static readonly int[] _BlackNoteIndices = [1, 3, 6, 8, 10];
 
@@ -34,15 +34,15 @@ public class PianoViewModel : INoteEventHandler
         _uiConfig.OnChange(OnUIConfigChanged);
 
         NoteNameStyle style = _uiConfig.CurrentValue.NoteNameStyle;
-        Dictionary<int, string> keyLabels = BuildKeyLabels();
+        Dictionary<ushort, string> keyLabels = BuildKeyLabels();
 
         List<PianoKeyViewModel> keys = [];
 
-        for (int pitch = _FirstPitch; pitch <= _LastPitch; pitch++)
+        for (ushort pitch = _FirstPitch; pitch <= _LastPitch; pitch++)
         {
-            int noteIndex = pitch % 12;
+            int noteIndex = pitch % NotePitch.NotesPerOctave;
             bool isBlack = _BlackNoteIndices.Contains(noteIndex);
-            NotePitch notePitch = new((ushort)pitch);
+            NotePitch notePitch = new(pitch);
             string keyLabel = keyLabels.TryGetValue(pitch, out string? label) ? label : "";
             string noteLabel = NoteNames.GetNoteName(notePitch, style);
 
@@ -82,10 +82,10 @@ public class PianoViewModel : INoteEventHandler
         });
     }
 
-    private static Dictionary<int, string> BuildKeyLabels()
+    private static Dictionary<ushort, string> BuildKeyLabels()
     {
-        Dictionary<int, string> labels = [];
-        int pitch = _FirstPitch;
+        Dictionary<ushort, string> labels = [];
+        ushort pitch = _FirstPitch;
 
         AssignRowLabels(labels, _DigitRow, ref pitch);
         AssignRowLabels(labels, _TopRow, ref pitch);
@@ -95,13 +95,13 @@ public class PianoViewModel : INoteEventHandler
         return labels;
     }
 
-    private static void AssignRowLabels(Dictionary<int, string> labels, string[] row, ref int pitch)
+    private static void AssignRowLabels(Dictionary<ushort, string> labels, string[] row, ref ushort pitch)
     {
         int rowIndex = 0;
 
         while (rowIndex < row.Length && pitch <= _LastPitch)
         {
-            int noteIndex = pitch % 12;
+            int noteIndex = pitch % NotePitch.NotesPerOctave;
             bool isBlack = _BlackNoteIndices.Contains(noteIndex);
 
             if (isBlack)
@@ -120,7 +120,7 @@ public class PianoViewModel : INoteEventHandler
                 // Check if next note is a black key — assign its label too
                 if (pitch <= _LastPitch)
                 {
-                    int nextNoteIndex = pitch % 12;
+                    int nextNoteIndex = pitch % NotePitch.NotesPerOctave;
                     bool nextIsBlack = _BlackNoteIndices.Contains(nextNoteIndex);
 
                     if (nextIsBlack)

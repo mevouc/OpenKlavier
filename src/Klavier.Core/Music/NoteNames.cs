@@ -11,8 +11,8 @@ public static class NoteNames
 
     public static string GetNoteName(NotePitch pitch, NoteNameStyle style)
     {
-        int noteIndex = pitch.Value % 12;
-        int spnOctave = (pitch.Value / 12) - 1;
+        int noteIndex = pitch.Index;
+        int spnOctave = pitch.SpnOctave;
 
         return style switch
         {
