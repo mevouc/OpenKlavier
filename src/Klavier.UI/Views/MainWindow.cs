@@ -32,7 +32,7 @@ public class MainWindow : Window
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        e.Handled = _keyboardInput.HandleKeyDown(e.PhysicalKey);
+        e.Handled = _keyboardInput.HandleKeyDown(e.PhysicalKey, e.KeyModifiers);
 
         base.OnKeyDown(e);
     }
