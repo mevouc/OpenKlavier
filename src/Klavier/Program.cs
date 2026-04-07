@@ -16,7 +16,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     {
         IConfiguration configuration = context.Configuration;
 
-        services.Configure<PlaybackConfig>(configuration.GetSection("Playback"));
+        services.Configure<PianoConfig>(configuration.GetSection("Piano"));
         services.AddFluidSynthAudio(configuration.GetSection("Audio"));
         services.AddSingleton<IPianoEngine, PianoEngine>();
         services.AddKlavierUI(configuration.GetSection("UI"));

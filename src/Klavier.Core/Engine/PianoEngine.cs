@@ -9,22 +9,22 @@ namespace Klavier.Core.Engine;
 
 public class PianoEngine : IPianoEngine
 {
-    private readonly IOptionsMonitor<PlaybackConfig> _playbackConfig;
+    private readonly IOptionsMonitor<PianoConfig> _playbackConfig;
     private readonly ILogger<PianoEngine> _logger;
-    private PlaybackConfig _lastPlaybackConfig;
+    private PianoConfig _lastPianoConfig;
     private readonly Dictionary<NotePitch, int> _activeNotes = []; // value is active inputs count (note plays when there's at least one)
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
     private bool _isSustainOn;
 
     public PianoEngine(
-        IOptionsMonitor<PlaybackConfig> playbackConfig,
+        IOptionsMonitor<PianoConfig> playbackConfig,
         ILogger<PianoEngine> logger)
     {
         _playbackConfig = playbackConfig;
         _logger = logger;
 
-        _lastPlaybackConfig = _playbackConfig.CurrentValue;
-        playbackConfig.OnChange(OnPlaybackConfigChanged); // triggers AllNotesOff if transpose changes
+        _lastPianoConfig = _playbackConfig.CurrentValue;
+        playbackConfig.OnChange(OnPianoConfigChanged); // triggers AllNotesOff if transpose changes
     }
 
     public void RegisterHandler(INoteEventHandler noteEventHandler)
@@ -115,13 +115,13 @@ public class PianoEngine : IPianoEngine
         _activeNotes.Clear();
     }
 
-    private void OnPlaybackConfigChanged(PlaybackConfig newConfig)
+    private void OnPianoConfigChanged(PianoConfig newConfig)
     {
-        if (newConfig.Transpose != _lastPlaybackConfig.Transpose)
+        if (newConfig.Transpose != _lastPianoConfig.Transpose)
         {
             AllNotesOff();
         }
-        _lastPlaybackConfig = newConfig;
+        _lastPianoConfig = newConfig;
     }
 
     private void NotifyHandlers(Action<INoteEventHandler> action)
