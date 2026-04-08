@@ -15,7 +15,9 @@ public partial class PianoKeyViewModel(
 {
     public NotePitch Pitch { get; } = pitch;
     public bool IsBlack => Pitch.IsAccidental;
-    public string KeyLabel { get; } = keyLabel;
+
+    [ObservableProperty]
+    private string _keyLabel = keyLabel;
 
     [ObservableProperty]
     private bool _isPressed;
