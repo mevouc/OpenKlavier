@@ -6,6 +6,7 @@ using Klavier.Core.Music;
 using Klavier.Core.Ports;
 using Klavier.Core.Primitives;
 using Klavier.Core.Options;
+using Klavier.UI.Input;
 using Klavier.UI.Options;
 using Microsoft.Extensions.Options;
 
@@ -15,18 +16,6 @@ public class PianoViewModel : INoteEventHandler
 {
     private const ushort _FirstPitch = 36;  // C2
     private const ushort _LastPitch = 96;   // C7
-
-    // QWERTY key labels
-    private static readonly string[] _QwertyDigitRow = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-    private static readonly string[] _QwertyTopRow = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];
-    private static readonly string[] _QwertyHomeRow = ["A", "S", "D", "F", "G", "H", "J", "K", "L"];
-    private static readonly string[] _QwertyBottomRow = ["Z", "X", "C", "V", "B", "N", "M"];
-
-    // AZERTY key labels
-    private static readonly string[] _AzertyDigitRow = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-    private static readonly string[] _AzertyTopRow = ["A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P"];
-    private static readonly string[] _AzertyHomeRow = ["Q", "S", "D", "F", "G", "H", "J", "K", "L", "M"];
-    private static readonly string[] _AzertyBottomRow = ["W", "X", "C", "V", "B", "N"];
 
     private readonly FrozenDictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
@@ -43,7 +32,7 @@ public class PianoViewModel : INoteEventHandler
 
         UIConfig config = _uiConfig.CurrentValue;
         short transpose = _pianoConfig.CurrentValue.Transpose;
-        Dictionary<ushort, string> keyLabels = BuildKeyLabels(config.KeyboardLayout);
+        FrozenDictionary<NotePitch, string> keyLabels = LoadKeyLabels(config.KeyboardLayout);
 
         List<PianoKeyViewModel> keys = [];
 
@@ -52,7 +41,7 @@ public class PianoViewModel : INoteEventHandler
             NotePitch keyPitch = new(pitch);
             NotePitch soundingPitch = keyPitch.Transpose(transpose);
 
-            string keyLabel = keyLabels.TryGetValue(pitch, out string? label) ? label : "";
+            string keyLabel = keyLabels.TryGetValue(keyPitch, out string? label) ? label : "";
             string noteLabel = NoteNames.GetNoteName(soundingPitch, config.NoteNameStyle);
 
             keys.Add(new PianoKeyViewModel(
@@ -88,14 +77,14 @@ public class PianoViewModel : INoteEventHandler
     private void OnUIConfigChanged(UIConfig newConfig)
     {
         short transpose = _pianoConfig.CurrentValue.Transpose;
-        Dictionary<ushort, string> keyLabels = BuildKeyLabels(newConfig.KeyboardLayout);
+        FrozenDictionary<NotePitch, string> keyLabels = LoadKeyLabels(newConfig.KeyboardLayout);
 
         Dispatcher.UIThread.Post(() =>
         {
             foreach (PianoKeyViewModel key in Keys)
             {
                 NotePitch soundingPitch = key.Pitch.Transpose(transpose);
-                key.KeyLabel = keyLabels.TryGetValue(key.Pitch.Value, out string? label) ? label : "";
+                key.KeyLabel = keyLabels.TryGetValue(key.Pitch, out string? label) ? label : "";
                 key.NoteLabel = NoteNames.GetNoteName(soundingPitch, newConfig.NoteNameStyle);
                 key.ShowKeyLabel = newConfig.ShowKeyLabels;
                 key.ShowNoteLabel = newConfig.ShowNoteLabels;
@@ -116,54 +105,22 @@ public class PianoViewModel : INoteEventHandler
         });
     }
 
-    private static Dictionary<ushort, string> BuildKeyLabels(KeyboardLayout layout)
+    private static FrozenDictionary<NotePitch, string> LoadKeyLabels(string layoutName)
     {
-        bool isAzerty = layout == KeyboardLayout.AZERTY;
+        KeyboardMapping mapping = KeyboardMappingProvider.Load(layoutName);
 
-        Dictionary<ushort, string> labels = [];
-        ushort pitch = _FirstPitch;
+        Dictionary<NotePitch, string> labels = [];
 
-        AssignRowLabels(labels, isAzerty ? _AzertyDigitRow : _QwertyDigitRow, ref pitch);
-        AssignRowLabels(labels, isAzerty ? _AzertyTopRow : _QwertyTopRow, ref pitch);
-        AssignRowLabels(labels, isAzerty ? _AzertyHomeRow : _QwertyHomeRow, ref pitch);
-        AssignRowLabels(labels, isAzerty ? _AzertyBottomRow : _QwertyBottomRow, ref pitch);
-
-        return labels;
-    }
-
-    private static void AssignRowLabels(Dictionary<ushort, string> labels, string[] row, ref ushort pitch)
-    {
-        int rowIndex = 0;
-
-        while (rowIndex < row.Length && pitch <= _LastPitch)
+        foreach (KeyMappingEntry entry in mapping.WhiteKeys.Values)
         {
-            NotePitch current = new(pitch);
-
-            if (current.IsAccidental)
-            {
-                // Black key gets Shift+previous white key label
-                labels[pitch] = $"⇧{row[rowIndex - 1]}";
-                pitch++;
-            }
-            else
-            {
-                // White key gets the next label in the row
-                labels[pitch] = row[rowIndex];
-                rowIndex++;
-                pitch++;
-
-                // Check if next note is a black key — assign its label too
-                if (pitch <= _LastPitch)
-                {
-                    NotePitch next = new(pitch);
-
-                    if (next.IsAccidental)
-                    {
-                        labels[pitch] = $"⇧{row[rowIndex - 1]}";
-                        pitch++;
-                    }
-                }
-            }
+            labels[entry.Pitch] = entry.Label;
         }
+
+        foreach (KeyMappingEntry entry in mapping.BlackKeys.Values)
+        {
+            labels[entry.Pitch] = entry.Label;
+        }
+
+        return labels.ToFrozenDictionary();
     }
 }

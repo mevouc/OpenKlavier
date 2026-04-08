@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using Avalonia.Input;
 using Klavier.Core.Engine;
 using Klavier.Core.Primitives;
@@ -9,197 +8,17 @@ namespace Klavier.UI.Input;
 
 public class KeyboardInputHandler
 {
-    #region QWERTY maps (home row 9 keys, bottom row 7 keys)
-
-    private static readonly FrozenDictionary<PhysicalKey, NotePitch> _QwertyWhiteKeyMap = new Dictionary<PhysicalKey, NotePitch>
-    {
-        // Digits row: C2 - E3
-        [PhysicalKey.Digit1] = new(36),  // C2
-        [PhysicalKey.Digit2] = new(38),  // D2
-        [PhysicalKey.Digit3] = new(40),  // E2
-        [PhysicalKey.Digit4] = new(41),  // F2
-        [PhysicalKey.Digit5] = new(43),  // G2
-        [PhysicalKey.Digit6] = new(45),  // A2
-        [PhysicalKey.Digit7] = new(47),  // B2
-        [PhysicalKey.Digit8] = new(48),  // C3
-        [PhysicalKey.Digit9] = new(50),  // D3
-        [PhysicalKey.Digit0] = new(52),  // E3
-
-        // Top row: F3 - A4
-        [PhysicalKey.Q] = new(53),   // F3
-        [PhysicalKey.W] = new(55),   // G3
-        [PhysicalKey.E] = new(57),   // A3
-        [PhysicalKey.R] = new(59),   // B3
-        [PhysicalKey.T] = new(60),   // C4
-        [PhysicalKey.Y] = new(62),   // D4
-        [PhysicalKey.U] = new(64),   // E4
-        [PhysicalKey.I] = new(65),   // F4
-        [PhysicalKey.O] = new(67),   // G4
-        [PhysicalKey.P] = new(69),   // A4
-
-        // Home row: B4 - C6
-        [PhysicalKey.A] = new(71),   // B4
-        [PhysicalKey.S] = new(72),   // C5
-        [PhysicalKey.D] = new(74),   // D5
-        [PhysicalKey.F] = new(76),   // E5
-        [PhysicalKey.G] = new(77),   // F5
-        [PhysicalKey.H] = new(79),   // G5
-        [PhysicalKey.J] = new(81),   // A5
-        [PhysicalKey.K] = new(83),   // B5
-        [PhysicalKey.L] = new(84),   // C6
-
-        // Bottom row: D6 - C7
-        [PhysicalKey.Z] = new(86),   // D6
-        [PhysicalKey.X] = new(88),   // E6
-        [PhysicalKey.C] = new(89),   // F6
-        [PhysicalKey.V] = new(91),   // G6
-        [PhysicalKey.B] = new(93),   // A6
-        [PhysicalKey.N] = new(95),   // B6
-        [PhysicalKey.M] = new(96),   // C7
-    }.ToFrozenDictionary();
-
-    private static readonly FrozenDictionary<PhysicalKey, NotePitch> _QwertyBlackKeyMap = new Dictionary<PhysicalKey, NotePitch>
-    {
-        // Digits row sharps
-        [PhysicalKey.Digit1] = new(37),  // C#2
-        [PhysicalKey.Digit2] = new(39),  // D#2
-        [PhysicalKey.Digit4] = new(42),  // F#2
-        [PhysicalKey.Digit5] = new(44),  // G#2
-        [PhysicalKey.Digit6] = new(46),  // A#2
-        [PhysicalKey.Digit8] = new(49),  // C#3
-        [PhysicalKey.Digit9] = new(51),  // D#3
-
-        // Top row sharps
-        [PhysicalKey.Q] = new(54),   // F#3
-        [PhysicalKey.W] = new(56),   // G#3
-        [PhysicalKey.E] = new(58),   // A#3
-        [PhysicalKey.T] = new(61),   // C#4
-        [PhysicalKey.Y] = new(63),   // D#4
-        [PhysicalKey.I] = new(66),   // F#4
-        [PhysicalKey.O] = new(68),   // G#4
-        [PhysicalKey.P] = new(70),   // A#4
-
-        // Home row sharps
-        [PhysicalKey.S] = new(73),   // C#5
-        [PhysicalKey.D] = new(75),   // D#5
-        [PhysicalKey.G] = new(78),   // F#5
-        [PhysicalKey.H] = new(80),   // G#5
-        [PhysicalKey.J] = new(82),   // A#5
-        [PhysicalKey.L] = new(85),   // C#6
-
-        // Bottom row sharps
-        [PhysicalKey.Z] = new(87),   // D#6
-        [PhysicalKey.C] = new(90),   // F#6
-        [PhysicalKey.V] = new(92),   // G#6
-        [PhysicalKey.B] = new(94),   // A#6
-    }.ToFrozenDictionary();
-
-    #endregion
-
-    #region AZERTY maps (home row 10 keys with Semicolon, bottom row 6 keys without M)
-
-    private static readonly FrozenDictionary<PhysicalKey, NotePitch> _AzertyWhiteKeyMap = new Dictionary<PhysicalKey, NotePitch>
-    {
-        // Digits row: C2 - E3 (same as QWERTY)
-        [PhysicalKey.Digit1] = new(36),  // C2
-        [PhysicalKey.Digit2] = new(38),  // D2
-        [PhysicalKey.Digit3] = new(40),  // E2
-        [PhysicalKey.Digit4] = new(41),  // F2
-        [PhysicalKey.Digit5] = new(43),  // G2
-        [PhysicalKey.Digit6] = new(45),  // A2
-        [PhysicalKey.Digit7] = new(47),  // B2
-        [PhysicalKey.Digit8] = new(48),  // C3
-        [PhysicalKey.Digit9] = new(50),  // D3
-        [PhysicalKey.Digit0] = new(52),  // E3
-
-        // Top row: F3 - A4 (same as QWERTY)
-        [PhysicalKey.Q] = new(53),   // F3
-        [PhysicalKey.W] = new(55),   // G3
-        [PhysicalKey.E] = new(57),   // A3
-        [PhysicalKey.R] = new(59),   // B3
-        [PhysicalKey.T] = new(60),   // C4
-        [PhysicalKey.Y] = new(62),   // D4
-        [PhysicalKey.U] = new(64),   // E4
-        [PhysicalKey.I] = new(65),   // F4
-        [PhysicalKey.O] = new(67),   // G4
-        [PhysicalKey.P] = new(69),   // A4
-
-        // Home row: B4 - D6 (10 keys, Semicolon = M on AZERTY)
-        [PhysicalKey.A] = new(71),   // B4
-        [PhysicalKey.S] = new(72),   // C5
-        [PhysicalKey.D] = new(74),   // D5
-        [PhysicalKey.F] = new(76),   // E5
-        [PhysicalKey.G] = new(77),   // F5
-        [PhysicalKey.H] = new(79),   // G5
-        [PhysicalKey.J] = new(81),   // A5
-        [PhysicalKey.K] = new(83),   // B5
-        [PhysicalKey.L] = new(84),   // C6
-        [PhysicalKey.Semicolon] = new(86),  // D6
-
-        // Bottom row: E6 - C7 (6 keys, no M)
-        [PhysicalKey.Z] = new(88),   // E6
-        [PhysicalKey.X] = new(89),   // F6
-        [PhysicalKey.C] = new(91),   // G6
-        [PhysicalKey.V] = new(93),   // A6
-        [PhysicalKey.B] = new(95),   // B6
-        [PhysicalKey.N] = new(96),   // C7
-    }.ToFrozenDictionary();
-
-    private static readonly FrozenDictionary<PhysicalKey, NotePitch> _AzertyBlackKeyMap = new Dictionary<PhysicalKey, NotePitch>
-    {
-        // Digits row sharps (same as QWERTY)
-        [PhysicalKey.Digit1] = new(37),  // C#2
-        [PhysicalKey.Digit2] = new(39),  // D#2
-        [PhysicalKey.Digit4] = new(42),  // F#2
-        [PhysicalKey.Digit5] = new(44),  // G#2
-        [PhysicalKey.Digit6] = new(46),  // A#2
-        [PhysicalKey.Digit8] = new(49),  // C#3
-        [PhysicalKey.Digit9] = new(51),  // D#3
-
-        // Top row sharps (same as QWERTY)
-        [PhysicalKey.Q] = new(54),   // F#3
-        [PhysicalKey.W] = new(56),   // G#3
-        [PhysicalKey.E] = new(58),   // A#3
-        [PhysicalKey.T] = new(61),   // C#4
-        [PhysicalKey.Y] = new(63),   // D#4
-        [PhysicalKey.I] = new(66),   // F#4
-        [PhysicalKey.O] = new(68),   // G#4
-        [PhysicalKey.P] = new(70),   // A#4
-
-        // Home row sharps (+ Semicolon for D#6)
-        [PhysicalKey.S] = new(73),   // C#5
-        [PhysicalKey.D] = new(75),   // D#5
-        [PhysicalKey.G] = new(78),   // F#5
-        [PhysicalKey.H] = new(80),   // G#5
-        [PhysicalKey.J] = new(82),   // A#5
-        [PhysicalKey.L] = new(85),   // C#6
-        [PhysicalKey.Semicolon] = new(87),  // D#6
-
-        // Bottom row sharps
-        [PhysicalKey.X] = new(90),   // F#6
-        [PhysicalKey.C] = new(92),   // G#6
-        [PhysicalKey.V] = new(94),   // A#6
-    }.ToFrozenDictionary();
-
-    #endregion
-
     private readonly IPianoEngine _pianoEngine;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
+    private readonly KeyboardMapping _mapping;
     private readonly Dictionary<PhysicalKey, NotePitch> _heldNotes = [];
-    private readonly FrozenDictionary<PhysicalKey, NotePitch> _activeWhiteMap;
-    private readonly FrozenDictionary<PhysicalKey, NotePitch> _activeBlackMap;
     private bool _isSustainToggled;
 
     public KeyboardInputHandler(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig)
     {
         _pianoEngine = pianoEngine;
         _uiConfig = uiConfig;
-
-        (_activeWhiteMap, _activeBlackMap) = uiConfig.CurrentValue.KeyboardLayout switch
-        {
-            KeyboardLayout.AZERTY => (_AzertyWhiteKeyMap, _AzertyBlackKeyMap),
-            _ => (_QwertyWhiteKeyMap, _QwertyBlackKeyMap),
-        };
+        _mapping = KeyboardMappingProvider.Load(uiConfig.CurrentValue.KeyboardLayout);
 
         if (uiConfig.CurrentValue.SustainMode == SustainMode.InvertedHold)
         {
@@ -215,13 +34,18 @@ public class KeyboardInputHandler
             return true;
         }
 
-        FrozenDictionary<PhysicalKey, NotePitch> map = modifiers.HasFlag(KeyModifiers.Shift)
-            ? _activeBlackMap
-            : _activeWhiteMap;
-
-        if (map.TryGetValue(key, out NotePitch note) && _heldNotes.TryAdd(key, note))
+        if (modifiers.HasFlag(_mapping.BlackKeyModifier)
+            && _mapping.BlackKeys.TryGetValue(key, out KeyMappingEntry blackKey)
+            && _heldNotes.TryAdd(key, blackKey.Pitch))
         {
-            _pianoEngine.NoteOn(note);
+            _pianoEngine.NoteOn(blackKey.Pitch);
+            return true;
+        }
+
+        if (_mapping.WhiteKeys.TryGetValue(key, out KeyMappingEntry whiteKey)
+            && _heldNotes.TryAdd(key, whiteKey.Pitch))
+        {
+            _pianoEngine.NoteOn(whiteKey.Pitch);
             return true;
         }
 
