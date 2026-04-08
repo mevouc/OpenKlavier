@@ -1,14 +1,11 @@
+using System.Collections.Frozen;
+using Avalonia.Input;
+
 namespace Klavier.UI.Input;
 
 public class KeyboardMapping
 {
-    public string BlackKeyModifier { get; init; } = "Shift";
-    public Dictionary<string, KeyMappingEntry> WhiteKeys { get; init; } = [];
-    public Dictionary<string, KeyMappingEntry> BlackKeys { get; init; } = [];
-}
-
-public class KeyMappingEntry
-{
-    public ushort Pitch { get; init; }
-    public string Label { get; init; } = "";
+    public FrozenDictionary<PhysicalKey, KeyMappingEntry> WhiteKeys { get; init; } = FrozenDictionary<PhysicalKey, KeyMappingEntry>.Empty;
+    public FrozenDictionary<PhysicalKey, KeyMappingEntry> BlackKeys { get; init; } = FrozenDictionary<PhysicalKey, KeyMappingEntry>.Empty;
+    public KeyModifiers BlackKeyModifier { get; init; } = KeyModifiers.Shift;
 }
