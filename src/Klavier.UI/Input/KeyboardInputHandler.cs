@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Avalonia.Input;
 using Klavier.Core.Engine;
 using Klavier.Core.Primitives;
@@ -35,18 +36,13 @@ public class KeyboardInputHandler
             return true;
         }
 
-        if (modifiers.HasFlag(_mapping.BlackKeyModifier)
-            && _mapping.BlackKeys.TryGetValue(key, out KeyMappingEntry blackKey)
-            && _heldNotes.TryAdd(key, blackKey.Pitch))
-        {
-            _pianoEngine.NoteOn(blackKey.Pitch);
-            return true;
-        }
+        FrozenDictionary<PhysicalKey, KeyMappingEntry> map = modifiers.HasFlag(_mapping.BlackKeyModifier)
+            ? _mapping.BlackKeys
+            : _mapping.WhiteKeys;
 
-        if (_mapping.WhiteKeys.TryGetValue(key, out KeyMappingEntry whiteKey)
-            && _heldNotes.TryAdd(key, whiteKey.Pitch))
+        if (map.TryGetValue(key, out KeyMappingEntry keyEntry) && _heldNotes.TryAdd(key, keyEntry.Pitch))
         {
-            _pianoEngine.NoteOn(whiteKey.Pitch);
+            _pianoEngine.NoteOn(keyEntry.Pitch);
             return true;
         }
 
