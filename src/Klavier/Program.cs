@@ -9,6 +9,7 @@ using Klavier.UI.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .UseContentRoot(AppContext.BaseDirectory)
@@ -34,6 +35,19 @@ engine.RegisterHandler(audio);
 PianoViewModel pianoViewModel = host.Services.GetRequiredService<PianoViewModel>();
 engine.RegisterHandler(pianoViewModel);
 
-AppBuilder.Configure(() => new App(() => host.Services.GetRequiredService<MainWindow>()))
-    .UsePlatformDetect()
-    .StartWithClassicDesktopLifetime(args);
+try
+{
+    AppBuilder.Configure(() => new App(() => host.Services.GetRequiredService<MainWindow>()))
+        .UsePlatformDetect()
+        .StartWithClassicDesktopLifetime(args);
+}
+catch (Exception e)
+{
+    ILogger<Program> logger = host.Services.GetRequiredService<ILogger<Program>>();
+
+    logger.LogError(e, "Unhandled exception: {Message}", e.Message);
+
+    return 1;
+}
+
+return 0;

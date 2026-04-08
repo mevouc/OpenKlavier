@@ -15,6 +15,7 @@ public class FluidSynthAudioOutput : IAudioOutput
     private const int _ControllerOff = 0;
     private readonly Settings _synthSettings;
     private readonly IOptionsMonitor<AudioConfig> _audioConfig;
+    private readonly ILogger<FluidSynthAudioOutput> _logger;
     private AudioConfig _lastAudioConfig;
     private Synth? _synth;
     private AudioDriver? _audioDriver;
@@ -26,15 +27,16 @@ public class FluidSynthAudioOutput : IAudioOutput
         ILogger<FluidSynthAudioOutput> logger)
     {
         _audioConfig = audioConfig;
+        _logger = logger;
 
         _lastAudioConfig = _audioConfig.CurrentValue;
         _audioConfig.OnChange(OnAudioConfigChanged); // dynamically update volume/gain
 
-        ConfigureThirdPartyLogging(logger);
+        ConfigureThirdPartyLogging();
         _synthSettings = new Settings();
     }
 
-    private void ConfigureThirdPartyLogging(ILogger<FluidSynthAudioOutput> logger)
+    private void ConfigureThirdPartyLogging()
     {
         Logger.LogLevel minimumLogLevel = _audioConfig.CurrentValue.FluidSynthLogLevel;
 
@@ -46,16 +48,16 @@ public class FluidSynthAudioOutput : IAudioOutput
                 {
                     case Logger.LogLevel.Panic:
                     case Logger.LogLevel.Error:
-                        logger.LogError("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogError("FluidSynth ({Level}): {Message}", level, message);
                         break;
                     case Logger.LogLevel.Warning:
-                        logger.LogWarning("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogWarning("FluidSynth ({Level}): {Message}", level, message);
                         break;
                     case Logger.LogLevel.Information:
-                        logger.LogInformation("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogInformation("FluidSynth ({Level}): {Message}", level, message);
                         break;
                     default:
-                        logger.LogDebug("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogDebug("FluidSynth ({Level}): {Message}", level, message);
                         break;
                 }
             }
@@ -75,17 +77,20 @@ public class FluidSynthAudioOutput : IAudioOutput
 
     public void OnNoteOn(NoteOnEvent noteOnEvent)
     {
-        _synth?.NoteOn(_MidiChannel, noteOnEvent.Pitch.Value, noteOnEvent.Velocity.Value);
+        HandleNFluidSynthAction(() =>
+            _synth?.NoteOn(_MidiChannel, noteOnEvent.SoundingPitch.Value, noteOnEvent.Velocity.Value));
     }
 
     public void OnNoteOff(NoteOffEvent noteOffEvent)
     {
-        _synth?.NoteOff(_MidiChannel, noteOffEvent.Pitch.Value);
+        HandleNFluidSynthAction(() =>
+            _synth?.NoteOff(_MidiChannel, noteOffEvent.SoundingPitch.Value));
     }
 
     public void OnSustainChanged(bool isOn)
     {
-        _synth?.CC(_MidiChannel, _SustainController, isOn ? _ControllerOn : _ControllerOff);
+        HandleNFluidSynthAction(() =>
+            _synth?.CC(_MidiChannel, _SustainController, isOn ? _ControllerOn : _ControllerOff));
     }
 
     private void OnAudioConfigChanged(AudioConfig newConfig)
@@ -118,5 +123,17 @@ public class FluidSynthAudioOutput : IAudioOutput
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    private void HandleNFluidSynthAction(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "NFluidSynth exception: {Message}", e.Message);
+        }
     }
 }

@@ -1,7 +1,8 @@
-﻿using Klavier.Core.Primitives;
+using Klavier.Core.Primitives;
 
 namespace Klavier.Core.Events;
 
 public readonly record struct NoteOnEvent(
-    NotePitch Pitch,
+    NotePitch KeyPitch,
+    NotePitch SoundingPitch,
     NoteVelocity Velocity);
