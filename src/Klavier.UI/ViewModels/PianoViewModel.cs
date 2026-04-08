@@ -6,9 +6,9 @@ using Klavier.Core.Music;
 using Klavier.Core.Ports;
 using Klavier.Core.Primitives;
 using Klavier.Core.Options;
-using Klavier.UI.Input;
 using Klavier.UI.Options;
 using Microsoft.Extensions.Options;
+using Klavier.UI.Input.Mapping;
 
 namespace Klavier.UI.ViewModels;
 

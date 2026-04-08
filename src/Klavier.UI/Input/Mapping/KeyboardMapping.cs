@@ -1,7 +1,7 @@
 using System.Collections.Frozen;
 using Avalonia.Input;
 
-namespace Klavier.UI.Input;
+namespace Klavier.UI.Input.Mapping;
 
 public class KeyboardMapping
 {

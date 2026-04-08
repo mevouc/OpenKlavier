@@ -2,8 +2,9 @@ using System.Collections.Frozen;
 using System.Text.Json;
 using Avalonia.Input;
 using Klavier.Core.Primitives;
+using Klavier.UI.Input.Mapping.Dto;
 
-namespace Klavier.UI.Input;
+namespace Klavier.UI.Input.Mapping;
 
 public static class KeyboardMappingProvider
 {
