@@ -9,4 +9,6 @@ public static class PianoColors
     public static readonly Color BlackKey = Color.Parse("#1C1C1C");
     public static readonly Color BlackKeyPressed = Color.Parse("#1F3A63");
     public static readonly Color KeyBorder = Color.Parse("#333333");
+    public static readonly Color SustainBar = Color.Parse("#505050");
+    public static readonly Color SustainBarPressed = Color.Parse("#3A5A8A");
 }

@@ -10,6 +10,12 @@ namespace Klavier.UI.Views;
 
 public class MainWindow : Window
 {
+    private const string _WindowTitle = "Klavier";
+    private const int _DefaultWidth = 1000;
+    private const int _DefaultHeight = 300;
+    private const int _MinWidth = 700;
+    private const int _MinHeight = 150;
+
     private readonly KeyboardInputHandler _keyboardInput;
 
     public MainWindow(
@@ -20,9 +26,11 @@ public class MainWindow : Window
     {
         _keyboardInput = keyboardInput;
 
-        Title = "Klavier";
-        Width = 1000;
-        Height = 300;
+        Title = _WindowTitle;
+        Width = _DefaultWidth;
+        Height = _DefaultHeight;
+        MinWidth = _MinWidth;
+        MinHeight = _MinHeight;
         Background = new SolidColorBrush(KlavierTheme.AppBackground);
         Topmost = uiConfig.CurrentValue.Topmost;
 

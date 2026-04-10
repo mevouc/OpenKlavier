@@ -22,6 +22,8 @@ public class PianoViewModel : INoteEventHandler
     private readonly IOptionsMonitor<PianoConfig> _pianoConfig;
 
     public IReadOnlyList<PianoKeyViewModel> Keys { get; }
+    public bool IsSustainOn { get; private set; }
+    public event Action<bool>? SustainChanged;
 
     public PianoViewModel(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig, IOptionsMonitor<PianoConfig> pianoConfig)
     {
@@ -71,7 +73,11 @@ public class PianoViewModel : INoteEventHandler
 
     public void OnSustainChanged(bool isOn)
     {
-        // UI doesn't visually reflect sustain state for now
+        Dispatcher.UIThread.Post(() =>
+        {
+            IsSustainOn = isOn;
+            SustainChanged?.Invoke(isOn);
+        });
     }
 
     private void OnUIConfigChanged(UIConfig newConfig)

@@ -9,15 +9,21 @@ public class PianoView : Panel
 {
     private const double _BlackKeyWidthRatio = 0.68;
     private const double _BlackKeyHeightRatio = 0.55;
+    private const double _SustainBarHeight = 36;
+    private const double _SustainBarWidthRatio = 0.35;
+    private const double _SustainBarGap = 4;
 
     private readonly List<PianoKeyControl> _whiteKeys = [];
     private readonly List<PianoKeyControl> _blackKeys = [];
+    private readonly SustainBarControl _sustainBar;
 
     // Maps each white key's index in _whiteKeys to whether it has a black key after it
     private readonly List<bool> _whiteKeyHasSharp = [];
 
-    public PianoView(PianoViewModel viewModel)
+    public PianoView(PianoViewModel viewModel, SustainBarControl sustainBar)
     {
+        _sustainBar = sustainBar;
+
         // Separate white and black keys, maintaining order
         foreach (PianoKeyViewModel keyViewModel in viewModel.Keys)
         {
@@ -48,6 +54,8 @@ public class PianoView : Panel
         {
             Children.Add(blackKey);
         }
+
+        Children.Add(_sustainBar);
     }
 
     protected override Size ArrangeOverride(Size finalSize)
@@ -60,7 +68,7 @@ public class PianoView : Panel
         }
 
         double whiteKeyWidth = finalSize.Width / whiteKeyCount;
-        double whiteKeyHeight = finalSize.Height;
+        double whiteKeyHeight = finalSize.Height - _SustainBarHeight - _SustainBarGap;
         double blackKeyWidth = whiteKeyWidth * _BlackKeyWidthRatio;
         double blackKeyHeight = whiteKeyHeight * _BlackKeyHeightRatio;
 
@@ -85,6 +93,12 @@ public class PianoView : Panel
                 blackIndex++;
             }
         }
+
+        // Arrange sustain bar below keys, centered like a space bar
+        double sustainBarWidth = finalSize.Width * _SustainBarWidthRatio;
+        double sustainX = (finalSize.Width - sustainBarWidth) / 2;
+        double sustainY = whiteKeyHeight + _SustainBarGap;
+        _sustainBar.Arrange(new Rect(sustainX, sustainY, sustainBarWidth, _SustainBarHeight));
 
         return finalSize;
     }

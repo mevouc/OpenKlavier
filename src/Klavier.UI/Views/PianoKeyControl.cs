@@ -29,7 +29,7 @@ public class PianoKeyControl : Border
 
         BorderBrush = _BorderBrush;
         BorderThickness = new Thickness(1);
-        CornerRadius = new CornerRadius(0, 0, 2, 2);
+        CornerRadius = new CornerRadius(0, 0, Constants.CornerRadius, Constants.CornerRadius);
 
         SolidColorBrush textBrush = viewModel.IsBlack ? _BlackKeyTextBrush : _WhiteKeyTextBrush;
 
@@ -37,7 +37,7 @@ public class PianoKeyControl : Border
         {
             Text = viewModel.KeyLabel,
             Foreground = textBrush,
-            FontSize = 12,
+            FontSize = Constants.KeyLabelsFontSize,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
 
@@ -45,7 +45,7 @@ public class PianoKeyControl : Border
         {
             Text = viewModel.NoteLabel,
             Foreground = textBrush,
-            FontSize = 10,
+            FontSize = Constants.MusicLabelsFontSize,
             HorizontalAlignment = HorizontalAlignment.Center,
         };
 
