@@ -15,7 +15,9 @@ public class PianoKeyControl : Border
     private static readonly SolidColorBrush _WhiteKeyPressedBrush = new(PianoColors.WhiteKeyPressed);
     private static readonly SolidColorBrush _BlackKeyBrush = new(PianoColors.BlackKey);
     private static readonly SolidColorBrush _BlackKeyPressedBrush = new(PianoColors.BlackKeyPressed);
-    private static readonly SolidColorBrush _BorderBrush = new(PianoColors.KeyBorder);
+    private static readonly SolidColorBrush _DefaultBorderBrush = new(PianoColors.KeyBorder);
+    private static readonly SolidColorBrush _ActiveBorderBrush = new(KlavierTheme.Accent);
+    private static readonly SolidColorBrush _ActiveTextBrush = new(KlavierTheme.Accent);
     private static readonly SolidColorBrush _WhiteKeyTextBrush = new(Colors.Black);
     private static readonly SolidColorBrush _BlackKeyTextBrush = new(Colors.White);
 
@@ -27,7 +29,7 @@ public class PianoKeyControl : Border
     {
         _viewModel = viewModel;
 
-        BorderBrush = _BorderBrush;
+        BorderBrush = _DefaultBorderBrush;
         BorderThickness = new Thickness(1);
         CornerRadius = new CornerRadius(0, 0, Constants.CornerRadius, Constants.CornerRadius);
 
@@ -60,7 +62,7 @@ public class PianoKeyControl : Border
         _keyLabelText.IsVisible = viewModel.ShowKeyLabel;
         _noteLabelText.IsVisible = viewModel.ShowNoteLabel;
 
-        UpdateBackground();
+        UpdateVisualState();
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
@@ -85,7 +87,7 @@ public class PianoKeyControl : Border
         switch (e.PropertyName)
         {
             case nameof(PianoKeyViewModel.IsPressed):
-                UpdateBackground();
+                UpdateVisualState();
                 break;
             case nameof(PianoKeyViewModel.NoteLabel):
                 _noteLabelText.Text = _viewModel.NoteLabel;
@@ -99,15 +101,22 @@ public class PianoKeyControl : Border
         }
     }
 
-    private void UpdateBackground()
+    private void UpdateVisualState()
     {
-        if (_viewModel.IsBlack)
+        if (_viewModel.IsPressed)
         {
-            Background = _viewModel.IsPressed ? _BlackKeyPressedBrush : _BlackKeyBrush;
+            Background = _viewModel.IsBlack ? _BlackKeyPressedBrush : _WhiteKeyPressedBrush;
+            BorderBrush = _ActiveBorderBrush;
+            _keyLabelText.Foreground = _ActiveTextBrush;
+            _noteLabelText.Foreground = _ActiveTextBrush;
         }
         else
         {
-            Background = _viewModel.IsPressed ? _WhiteKeyPressedBrush : _WhiteKeyBrush;
+            Background = _viewModel.IsBlack ? _BlackKeyBrush : _WhiteKeyBrush;
+            BorderBrush = _DefaultBorderBrush;
+            SolidColorBrush defaultTextBrush = _viewModel.IsBlack ? _BlackKeyTextBrush : _WhiteKeyTextBrush;
+            _keyLabelText.Foreground = defaultTextBrush;
+            _noteLabelText.Foreground = defaultTextBrush;
         }
     }
 }
