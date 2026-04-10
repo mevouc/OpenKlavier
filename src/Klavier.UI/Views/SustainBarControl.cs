@@ -16,12 +16,16 @@ public class SustainBarControl : Border
     private const string _SustainKeyLabel = "Space";
     private const string _SustainMusicLabel = "Sustain";
 
-    private static readonly SolidColorBrush _UnpressedBrush = new(PianoColors.SustainBar);
-    private static readonly SolidColorBrush _PressedBrush = new(PianoColors.SustainBarPressed);
-    private static readonly SolidColorBrush _TextBrush = new(Colors.White);
+    private static readonly SolidColorBrush _BackgroundBrush = new(KlavierTheme.PanelBackground);
+    private static readonly SolidColorBrush _DefaultBorderBrush = new(KlavierTheme.PanelBackground);
+    private static readonly SolidColorBrush _ActiveBorderBrush = new(KlavierTheme.Accent);
+    private static readonly SolidColorBrush _DefaultTextBrush = new(Colors.White);
+    private static readonly SolidColorBrush _ActiveTextBrush = new(KlavierTheme.Accent);
 
     private readonly IPianoEngine _pianoEngine;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
+    private readonly TextBlock _keyLabelText;
+    private readonly TextBlock _musicLabelText;
     private bool _isToggled;
 
     public SustainBarControl(
@@ -32,32 +36,32 @@ public class SustainBarControl : Border
         _pianoEngine = pianoEngine;
         _uiConfig = uiConfig;
 
-        Background = pianoViewModel.IsSustainOn ? _PressedBrush : _UnpressedBrush;
+        Background = _BackgroundBrush;
+        BorderThickness = new Thickness(2);
         CornerRadius = new CornerRadius(Constants.CornerRadius);
+
+        _keyLabelText = new TextBlock
+        {
+            Text = _SustainKeyLabel,
+            FontSize = Constants.KeyLabelsFontSize,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
+
+        _musicLabelText = new TextBlock
+        {
+            Text = _SustainMusicLabel,
+            FontSize = Constants.MusicLabelsFontSize,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
 
         Child = new StackPanel
         {
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = _SustainKeyLabel,
-                    Foreground = _TextBrush,
-                    FontSize = Constants.KeyLabelsFontSize,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                },
-                new TextBlock
-                {
-                    Text = _SustainMusicLabel,
-                    Foreground = _TextBrush,
-                    FontSize = Constants.MusicLabelsFontSize,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                },
-            },
+            Children = { _keyLabelText, _musicLabelText },
         };
 
+        UpdateVisualState(pianoViewModel.IsSustainOn);
         pianoViewModel.SustainChanged += OnSustainChanged;
 
         PointerPressed += OnPointerPressed;
@@ -66,7 +70,14 @@ public class SustainBarControl : Border
 
     private void OnSustainChanged(bool isOn)
     {
-        Background = isOn ? _PressedBrush : _UnpressedBrush;
+        UpdateVisualState(isOn);
+    }
+
+    private void UpdateVisualState(bool isActive)
+    {
+        BorderBrush = isActive ? _ActiveBorderBrush : _DefaultBorderBrush;
+        _keyLabelText.Foreground = isActive ? _ActiveTextBrush : _DefaultTextBrush;
+        _musicLabelText.Foreground = isActive ? _ActiveTextBrush : _DefaultTextBrush;
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)

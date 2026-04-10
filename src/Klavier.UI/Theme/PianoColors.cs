@@ -5,10 +5,8 @@ namespace Klavier.UI.Theme;
 public static class PianoColors
 {
     public static readonly Color WhiteKey = Color.Parse("#FAFAFA");
-    public static readonly Color WhiteKeyPressed = Color.Parse("#A0C4FF");
+    public static readonly Color WhiteKeyPressed = Color.Parse("#A0B6EF");
     public static readonly Color BlackKey = Color.Parse("#1C1C1C");
-    public static readonly Color BlackKeyPressed = Color.Parse("#1F3A63");
+    public static readonly Color BlackKeyPressed = Color.Parse("#1F3260");
     public static readonly Color KeyBorder = Color.Parse("#333333");
-    public static readonly Color SustainBar = Color.Parse("#505050");
-    public static readonly Color SustainBarPressed = Color.Parse("#3A5A8A");
 }
