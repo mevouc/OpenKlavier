@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PianoViewModel>();
         services.AddSingleton<KeyboardInputHandler>();
         services.AddTransient<PianoView>();
+        services.AddTransient<ToolbarView>();
         services.AddTransient<MainWindow>();
 
         return services;

@@ -77,20 +77,38 @@ public class FluidSynthAudioOutput : IAudioOutput
 
     public void OnNoteOn(NoteOnEvent noteOnEvent)
     {
-        HandleNFluidSynthAction(() =>
-            _synth?.NoteOn(_MidiChannel, noteOnEvent.SoundingPitch.Value, noteOnEvent.Velocity.Value));
+        try
+        {
+            _synth?.NoteOn(_MidiChannel, noteOnEvent.SoundingPitch.Value, noteOnEvent.Velocity.Value);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "NFluidSynth NoteOn exception: {Message}", e.Message);
+        }
     }
 
     public void OnNoteOff(NoteOffEvent noteOffEvent)
     {
-        HandleNFluidSynthAction(() =>
-            _synth?.NoteOff(_MidiChannel, noteOffEvent.SoundingPitch.Value));
+        try
+        {
+            _synth?.NoteOff(_MidiChannel, noteOffEvent.SoundingPitch.Value);
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "NFluidSynth NoteOff exception: {Message}", e.Message);
+        }
     }
 
     public void OnSustainChanged(bool isOn)
     {
-        HandleNFluidSynthAction(() =>
-            _synth?.CC(_MidiChannel, _SustainController, isOn ? _ControllerOn : _ControllerOff));
+        try
+        {
+            _synth?.CC(_MidiChannel, _SustainController, isOn ? _ControllerOn : _ControllerOff);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "NFluidSynth CC exception: {Message}", e.Message);
+        }
     }
 
     private void OnAudioConfigChanged(AudioConfig newConfig)
@@ -123,17 +141,5 @@ public class FluidSynthAudioOutput : IAudioOutput
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
-    }
-
-    private void HandleNFluidSynthAction(Action action)
-    {
-        try
-        {
-            action();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "NFluidSynth exception: {Message}", e.Message);
-        }
     }
 }

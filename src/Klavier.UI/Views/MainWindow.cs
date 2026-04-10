@@ -15,6 +15,7 @@ public class MainWindow : Window
     public MainWindow(
         KeyboardInputHandler keyboardInput,
         PianoView pianoView,
+        ToolbarView toolbarView,
         IOptionsMonitor<UIConfig> uiConfig)
     {
         _keyboardInput = keyboardInput;
@@ -27,7 +28,12 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Topmost = config.Topmost);
 
-        Content = pianoView;
+        DockPanel.SetDock(toolbarView, Dock.Bottom);
+
+        Content = new DockPanel
+        {
+            Children = { toolbarView, pianoView },
+        };
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

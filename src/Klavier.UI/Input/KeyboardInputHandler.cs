@@ -30,12 +30,45 @@ public class KeyboardInputHandler
 
     public bool HandleKeyDown(PhysicalKey key, KeyModifiers modifiers)
     {
-        if (key == PhysicalKey.Space)
-        {
-            HandleSustainKeyDown();
-            return true;
-        }
+        return HandleDedicatedKeyDown(key)
+            || HandlePianoKeyDown(key, modifiers);
+    }
 
+    public bool HandleKeyUp(PhysicalKey key)
+    {
+        return HandleDedicatedKeyUp(key)
+            || HandlePianoKeyUp(key);
+    }
+
+    private bool HandleDedicatedKeyDown(PhysicalKey key)
+    {
+        switch (key)
+        {
+            case PhysicalKey.Escape:
+                _pianoEngine.AllNotesOff();
+                return true;
+            case PhysicalKey.Space:
+                HandleSustainKeyDown();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private bool HandleDedicatedKeyUp(PhysicalKey key)
+    {
+        switch (key)
+        {
+            case PhysicalKey.Space:
+                HandleSustainKeyUp();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private bool HandlePianoKeyDown(PhysicalKey key, KeyModifiers modifiers)
+    {
         FrozenDictionary<PhysicalKey, KeyMappingEntry> map = modifiers.HasFlag(_mapping.BlackKeyModifier)
             ? _mapping.BlackKeys
             : _mapping.WhiteKeys;
@@ -49,14 +82,8 @@ public class KeyboardInputHandler
         return false;
     }
 
-    public bool HandleKeyUp(PhysicalKey key)
+    private bool HandlePianoKeyUp(PhysicalKey key)
     {
-        if (key == PhysicalKey.Space)
-        {
-            HandleSustainKeyUp();
-            return true;
-        }
-
         if (_heldNotes.Remove(key, out NotePitch note))
         {
             _pianoEngine.NoteOff(note);
