@@ -8,4 +8,5 @@ public static class KlavierTheme
     public static readonly Color PanelBackground = Color.Parse("#2D2D2D");
     public static readonly Color TextPrimary = Color.Parse("#E0E0E0");
     public static readonly Color Accent = Color.Parse("#3A60BF");
+    public static readonly Color Divider = Color.Parse("#333333");
 }

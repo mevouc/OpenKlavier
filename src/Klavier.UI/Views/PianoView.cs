@@ -12,6 +12,7 @@ public class PianoView : Panel
     private const double _SustainBarHeight = 36;
     private const double _SustainBarWidthRatio = 0.35;
     private const double _SustainBarGap = 4;
+    private const double _SustainBarBottomMargin = 6;
 
     private readonly List<PianoKeyControl> _whiteKeys = [];
     private readonly List<PianoKeyControl> _blackKeys = [];
@@ -68,7 +69,7 @@ public class PianoView : Panel
         }
 
         double whiteKeyWidth = finalSize.Width / whiteKeyCount;
-        double whiteKeyHeight = finalSize.Height - _SustainBarHeight - _SustainBarGap;
+        double whiteKeyHeight = finalSize.Height - _SustainBarHeight - _SustainBarGap - _SustainBarBottomMargin;
         double blackKeyWidth = whiteKeyWidth * _BlackKeyWidthRatio;
         double blackKeyHeight = whiteKeyHeight * _BlackKeyHeightRatio;
 

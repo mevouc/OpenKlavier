@@ -36,11 +36,18 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Topmost = config.Topmost);
 
+        Border separator = new()
+        {
+            Height = 1,
+            Background = new SolidColorBrush(KlavierTheme.Divider),
+        };
+
         DockPanel.SetDock(toolbarView, Dock.Bottom);
+        DockPanel.SetDock(separator, Dock.Bottom);
 
         Content = new DockPanel
         {
-            Children = { toolbarView, pianoView },
+            Children = { toolbarView, separator, pianoView },
         };
     }
 
