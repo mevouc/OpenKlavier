@@ -7,6 +7,7 @@ namespace Klavier.UI.Views;
 
 public class PianoView : Panel
 {
+    private const int _MinHeight = 100;
     private const double _BlackKeyWidthRatio = 0.68;
     private const double _BlackKeyHeightRatio = 0.55;
     private const double _SustainBarHeight = 36;
@@ -24,6 +25,8 @@ public class PianoView : Panel
     public PianoView(PianoViewModel viewModel, SustainBarControl sustainBar)
     {
         _sustainBar = sustainBar;
+
+        MinHeight = _MinHeight;
 
         // Separate white and black keys, maintaining order
         foreach (PianoKeyViewModel keyViewModel in viewModel.Keys)
@@ -69,7 +72,7 @@ public class PianoView : Panel
         }
 
         double whiteKeyWidth = finalSize.Width / whiteKeyCount;
-        double whiteKeyHeight = finalSize.Height - _SustainBarHeight - _SustainBarGap - _SustainBarBottomMargin;
+        double whiteKeyHeight = Math.Max(0, finalSize.Height - _SustainBarHeight - _SustainBarGap - _SustainBarBottomMargin);
         double blackKeyWidth = whiteKeyWidth * _BlackKeyWidthRatio;
         double blackKeyHeight = whiteKeyHeight * _BlackKeyHeightRatio;
 

@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<SustainBarControl>();
         services.AddTransient<PianoView>();
         services.AddTransient<ToolbarView>();
+        services.AddTransient<SettingsPanel>();
         services.AddTransient<MainWindow>();
 
         return services;
