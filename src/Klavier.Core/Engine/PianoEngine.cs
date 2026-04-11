@@ -105,6 +105,7 @@ public class PianoEngine : IPianoEngine
 
     public void AllNotesOff()
     {
+        _logger.LogInformation("All notes off");
         SustainOff();
 
         for (ushort pitch = NotePitch.MinValue; pitch <= NotePitch.MaxValue; pitch++)
