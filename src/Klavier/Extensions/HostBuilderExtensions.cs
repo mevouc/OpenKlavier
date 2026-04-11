@@ -1,4 +1,4 @@
-using Klavier.Core.Ports;
+using Klavier.UI.Ports;
 using Klavier.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,8 +21,6 @@ public static class HostBuilderExtensions
                     reloadOnChange: true);
             })
             .ConfigureServices((_, services) =>
-            {
-                services.AddSingleton<IUserSettingsService>(new UserSettingsService(appName));
-            });
+                services.AddSingleton<IUserSettingsService>(new UserSettingsService(appName)));
     }
 }

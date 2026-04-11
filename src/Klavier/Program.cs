@@ -1,5 +1,4 @@
 using Avalonia;
-using Klavier;
 using Klavier.Audio;
 using Klavier.Core.Engine;
 using Klavier.Core.Options;

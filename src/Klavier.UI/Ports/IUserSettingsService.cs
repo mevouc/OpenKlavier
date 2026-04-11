@@ -1,4 +1,4 @@
-namespace Klavier.Core.Ports;
+namespace Klavier.UI.Ports;
 
 public interface IUserSettingsService
 {
