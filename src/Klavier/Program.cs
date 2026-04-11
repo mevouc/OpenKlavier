@@ -1,8 +1,10 @@
 using Avalonia;
+using Klavier;
 using Klavier.Audio;
 using Klavier.Core.Engine;
 using Klavier.Core.Options;
 using Klavier.Core.Ports;
+using Klavier.Extensions;
 using Klavier.UI;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
@@ -11,8 +13,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+const string AppName = "Klavier";
+
 IHost host = Host.CreateDefaultBuilder(args)
     .UseContentRoot(AppContext.BaseDirectory)
+    .UseUserSettings(AppName)
     .ConfigureServices((context, services) =>
     {
         IConfiguration configuration = context.Configuration;
