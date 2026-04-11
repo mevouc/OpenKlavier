@@ -1,6 +1,4 @@
-using Klavier.Core.Music;
-
-namespace Klavier.UI.Options;
+namespace Klavier.Config;
 
 public class UIConfig
 {

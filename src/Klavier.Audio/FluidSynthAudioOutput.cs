@@ -1,4 +1,4 @@
-﻿using Klavier.Audio.Options;
+﻿using Klavier.Config;
 using Klavier.Core.Events;
 using Klavier.Core.Ports;
 using Microsoft.Extensions.Logging;
@@ -38,7 +38,7 @@ public class FluidSynthAudioOutput : IAudioOutput
 
     private void ConfigureThirdPartyLogging()
     {
-        Logger.LogLevel minimumLogLevel = _audioConfig.CurrentValue.FluidSynthLogLevel;
+        Logger.LogLevel minimumLogLevel = Enum.Parse<Logger.LogLevel>(_audioConfig.CurrentValue.MinimumFluidSynthLogLevel);
 
         Logger.SetLoggerMethod((level, message, _) =>
         {

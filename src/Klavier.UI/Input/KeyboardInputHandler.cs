@@ -3,7 +3,7 @@ using Avalonia.Input;
 using Klavier.Core.Engine;
 using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
-using Klavier.UI.Options;
+using Klavier.Config;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Input;

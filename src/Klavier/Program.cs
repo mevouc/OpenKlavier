@@ -1,7 +1,7 @@
 using Avalonia;
 using Klavier.Audio;
 using Klavier.Core.Engine;
-using Klavier.Core.Options;
+using Klavier.Config;
 using Klavier.Core.Ports;
 using Klavier.Extensions;
 using Klavier.UI;
@@ -22,8 +22,8 @@ IHost host = Host.CreateDefaultBuilder(args)
         IConfiguration configuration = context.Configuration;
 
         services.Configure<PianoConfig>(configuration.GetSection("Piano"));
-        services.AddFluidSynthAudio(configuration.GetSection("Audio"));
         services.AddSingleton<IPianoEngine, PianoEngine>();
+        services.AddFluidSynthAudio(configuration.GetSection("Audio"));
         services.AddKlavierUI(configuration.GetSection("UI"));
     })
     .Build();

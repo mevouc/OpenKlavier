@@ -4,7 +4,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Core.Engine;
-using Klavier.UI.Options;
+using Klavier.Config;
 using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
 using Microsoft.Extensions.Options;

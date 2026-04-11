@@ -1,4 +1,4 @@
-namespace Klavier.UI.Options;
+namespace Klavier.Config;
 
 public enum SustainMode
 {

@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Klavier.Core\Klavier.Core.csproj" />
+    <ProjectReference Include="..\Klavier.Config\Klavier.Config.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">

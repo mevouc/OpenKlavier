@@ -1,4 +1,4 @@
-namespace Klavier.Core.Music;
+namespace Klavier.Config;
 
 public enum NoteNameStyle
 {

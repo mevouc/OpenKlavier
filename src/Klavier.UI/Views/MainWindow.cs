@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Klavier.UI.Input;
-using Klavier.UI.Options;
+using Klavier.Config;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
 

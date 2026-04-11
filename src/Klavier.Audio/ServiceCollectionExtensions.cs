@@ -1,4 +1,4 @@
-using Klavier.Audio.Options;
+using Klavier.Config;
 using Klavier.Core.Ports;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,5 @@
 using Klavier.UI.Input;
-using Klavier.UI.Options;
+using Klavier.Config;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
 using Microsoft.Extensions.Configuration;

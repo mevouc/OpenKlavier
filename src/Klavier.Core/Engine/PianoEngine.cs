@@ -1,5 +1,5 @@
 ﻿using Klavier.Core.Events;
-using Klavier.Core.Options;
+using Klavier.Config;
 using Klavier.Core.Ports;
 using Klavier.Core.Primitives;
 using Microsoft.Extensions.Logging;
@@ -34,7 +34,7 @@ public class PianoEngine : IPianoEngine
 
     public void NoteOn(NotePitch keyPitch)
     {
-        NoteVelocity velocity = _playbackConfig.CurrentValue.Velocity;
+        NoteVelocity velocity = new(_playbackConfig.CurrentValue.Velocity);
 
         if (velocity.Value == 0) // MIDI spec: velocity 0 = note-off
         {

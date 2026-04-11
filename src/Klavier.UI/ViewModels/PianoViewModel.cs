@@ -2,11 +2,10 @@ using System.Collections.Frozen;
 using Avalonia.Threading;
 using Klavier.Core.Engine;
 using Klavier.Core.Events;
+using Klavier.Config;
 using Klavier.Core.Music;
 using Klavier.Core.Ports;
 using Klavier.Core.Primitives;
-using Klavier.Core.Options;
-using Klavier.UI.Options;
 using Microsoft.Extensions.Options;
 using Klavier.UI.Input.Mapping;
 
