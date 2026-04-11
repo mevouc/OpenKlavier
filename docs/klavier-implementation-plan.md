@@ -17,8 +17,8 @@ not its architecture. Key features to integrate across iterations:
 
 - **Configurable velocity** (1-127, default 100) and **volume** (0-100%, default 60%)
 - **Transpose** (-21 to +21 semitones)
-- **Sustain pedal** with percentage-based decay (future refinement) — simple on/off first
-- **Note name styles**: Alphabetic (C, D, E) and Syllabic (Do, Re, Mi)
+- **Sustain pedal** via pure MIDI CC64 binary on/off — FluidSynth handles note holding natively
+- **Note name styles**: Scientific (C4), Solfege (Do₃), Helmholtz (c′)
 - **Key colors**: static theme constants first, user-configurable later
 - **Dark/Light theme**
 - **Key labels** (keyboard bindings) and **note labels** (note names) toggles
@@ -198,15 +198,18 @@ Mouse clicks on keys produce sound. Note labels displayed (Alphabetic + Syllabic
 
 | File | Purpose |
 |------|---------|
-| `src/Klavier.Core/Music/NoteNameStyle.cs` | Enum: `Alphabetic`, `Syllabic` |
-| `src/Klavier.Core/Music/NoteNames.cs` | Static methods: `GetNoteName(int pitch, NoteNameStyle style)` → "C4", "Do4", etc. |
+| `src/Klavier.Core/Music/NoteNameStyle.cs` | Enum: `Scientific`, `Solfege`, `Helmholtz` |
+| `src/Klavier.Core/Music/NoteNames.cs` | Static `GetNoteName(NotePitch, NoteNameStyle)` → Scientific "C4", Solfege "Do₃" (subscript Unicode, octave = SPN-1), Helmholtz "c′" (prime Unicode) |
+
+**Deviation from original plan**: Plan had Alphabetic/Syllabic only. Renamed to internationally-recognized
+names (Scientific/Solfege) and added Helmholtz notation.
 
 ### 4.3 — ViewModels
 
 | File | Purpose |
 |------|---------|
-| `src/Klavier.UI/ViewModels/PianoViewModel.cs` | Implements `INoteEventHandler` + `INotifyPropertyChanged`. Holds `ObservableCollection<PianoKeyViewModel>`. Marshals to UI thread via `Dispatcher.UIThread.Post`. Exposes `NoteNameStyle` property (bound to settings) |
-| `src/Klavier.UI/ViewModels/PianoKeyViewModel.cs` | `int Pitch`, `bool IsPressed`, `bool IsBlack`, `string KeyLabel` (keyboard binding), `string NoteLabel` (note name). Raises `PropertyChanged` |
+| `src/Klavier.UI/ViewModels/PianoViewModel.cs` | Implements `INoteEventHandler`. Holds `IReadOnlyList<PianoKeyViewModel>` + `FrozenDictionary<NotePitch, PianoKeyViewModel>`. Marshals to UI thread via `Dispatcher.UIThread.Post`. Reacts to `UIConfig` changes for label visibility and note name style |
+| `src/Klavier.UI/ViewModels/PianoKeyViewModel.cs` | Uses CommunityToolkit.Mvvm `[ObservableProperty]` source generator. `IsBlack` derived from `NotePitch.IsAccidental` (not passed as parameter). Primary constructor with `NotePitch`, key/note labels, visibility flags, `IPianoEngine` |
 
 ### 4.4 — Views
 
@@ -232,7 +235,8 @@ Mouse clicks on keys produce sound. Note labels displayed (Alphabetic + Syllabic
 
 | File | Purpose |
 |------|---------|
-| `src/Klavier.UI/Options/UIConfig.cs` | `string Theme`, `bool Topmost`, `bool ShowKeyLabels`, `bool ShowNoteLabels`, `string NoteNameStyle` |
+| `src/Klavier.UI/Options/UIConfig.cs` | `bool Topmost`, `bool ShowKeyLabels`, `bool ShowNoteLabels`, `NoteNameStyle NoteNameStyle`, `SustainMode SustainMode` |
+| `src/Klavier.UI/Options/SustainMode.cs` | Enum: `Hold`, `InvertedHold`, `Toggle` — lives in UI, not Core |
 
 ### 4.6 — Wiring
 `PianoViewModel` registered as `INoteEventHandler` on `PianoEngine` alongside audio handler.
@@ -247,49 +251,77 @@ Keyboard press → Engine → both audio plays AND key highlights.
 
 ---
 
-## Iteration 5: Full Key Mapping + Sustain Pedal
+## Iteration 5: Sustain Pedal + Full Key Mapping
 
-**Goal**: Complete scan-code-to-note mapping for AZERTY and QWERTY. Simple on/off sustain
-via Space key.
+**Goal**: Sustain pedal via MIDI CC64, full keyboard-to-note mapping for 61 keys.
 
-### 5.1 — Full Key Mapping
+### 5.1 — Sustain Pedal (DONE)
 
-| File | Purpose |
-|------|---------|
-| `src/Klavier.Core/Options/KeyMappingConfig.cs` | `string Layout` ("AZERTY" / "QWERTY") |
-| `src/Klavier.Core/Mapping/ScanCodeToNote.cs` | Layout tables as `IReadOnlyDictionary<PhysicalKey, int>`. Shift → sharps/black keys. Ctrl → extended 88-key range. 61-key default, 88-key with Ctrl modifiers |
-| `src/Klavier.Core/Mapping/PhysicalKey.cs` | Core-defined enum mirroring USB HID scan codes (subset). Numeric values match Avalonia's `PhysicalKey` for easy casting |
-| `src/Klavier.Core/Mapping/ModifierKeys.cs` | Flags enum: `None`, `Shift`, `Ctrl` |
+Pure MIDI CC64 binary on/off — FluidSynth handles note holding natively. No application-layer
+queuing, no timers, no percentage-based decay.
 
-```json
-{
-  "KeyMapping": {
-    "Layout": "AZERTY"
-  }
-}
-```
+**Deviation from original plan**: The plan described application-layer sustain where `NoteOff`
+is queued and dispatched on sustain release. We chose pure CC64 instead — simpler, more correct,
+and FluidSynth already handles the note-holding behavior internally.
 
-### 5.2 — Sustain Pedal (Simple On/Off)
+- `PianoEngine`: `SustainOn()` / `SustainOff()` toggle sustain state, notify handlers via `NotifyHandlers`
+- `INoteEventHandler`: `OnSustainChanged(bool isOn)`
+- `FluidSynthAudioOutput`: sends CC64 value 127 (on) or 0 (off) via `_synth.CC(0, 64, value)`
+- `KeyboardInputHandler` (extracted from MainWindow): Space key with 3 sustain modes
+- `SustainMode` enum (Hold, InvertedHold, Toggle) lives in `Klavier.UI.Options/`
 
-- `PianoEngine`: add `SustainOn()` / `SustainOff()` methods
-- When sustain is on, `NoteOff` queues the release instead of dispatching immediately
-- When sustain is released, all queued notes are dispatched as `NoteOffEvent`
-- `INoteEventHandler`: add `OnSustainChanged(bool isOn)`
-- `FluidSynthAudioOutput`: maps sustain to FluidSynth CC64 (sustain controller)
-- `MainWindow`: Space key → `PianoEngine.SustainOn/Off`
+**Deviation**: `SustainMode` is in `UIConfig`, not `PlaybackConfig` — it's an input behavior,
+not a playback parameter. `InvertedHold` mode was not in the original plan.
 
-### 5.3 — All Notes OFF
+### 5.2 — Refactoring (DONE)
 
-- `PianoEngine`: add `AllNotesOff()` method — releases all active notes and clears sustain queue
+Cleanup performed before full key mapping:
+
+- `NotifyHandlers(Action<INoteEventHandler>)` extracted in `PianoEngine` — deduplicates 5 foreach loops
+- `KeyboardInputHandler` extracted from `MainWindow` into `Klavier.UI.Input/` — MainWindow is now a thin shell (~42 lines)
+- `ServiceCollectionExtensions.AddKlavierUI()` created — mirrors Audio project's pattern
+- `NotePitch.IsAccidental` property added — replaced duplicated `_BlackNoteIndices` arrays in UI classes
+
+### 5.3 — Full Key Mapping (QWERTY — IN PROGRESS)
+
+**Deviation from original plan**: No Core-defined `PhysicalKey` enum, no `ModifierKeys` enum,
+no `KeyMappingConfig`, no `ScanCodeToNote` in Core. Mapping lives entirely in
+`Klavier.UI.Input/KeyboardInputHandler` using Avalonia's `PhysicalKey` directly.
+
+| Detail | Decision |
+|--------|----------|
+| Location | `KeyboardInputHandler` in `Klavier.UI.Input/` |
+| Avalonia dependency | Uses `PhysicalKey` and `KeyModifiers` directly (no Core abstractions) |
+| Data structures | Two static `FrozenDictionary<PhysicalKey, NotePitch>`: `_WhiteKeyMap` (36 entries) and `_BlackKeyMap` (25 entries) |
+| Shift detection | `KeyModifiers` passed from `MainWindow.OnKeyDown/OnKeyUp` |
+| Held notes tracking | `Dictionary<PhysicalKey, NotePitch> _heldNotes` — stores the actual pitch played, so releasing Shift mid-hold sends the correct NoteOff |
+| Shift+key with no sharp | Do nothing (silence) — mirrors real piano (no black key between E/F and B/C) |
+| Layout | QWERTY hardcoded first |
+
+**Key ranges per row (61 keys, C2–C7):**
+- Digits (`Digit1`–`Digit0`): C2–E3 (10 white + 7 black)
+- Top row (`Q`–`P`): F3–A#4 (10 white + 8 black)
+- Home row (`A`–`L`): B4–C#6 (9 white + 6 black)
+- Bottom row (`Z`–`M`): D6–C7 (7 white + 4 black)
+
+### 5.4 — Full Key Mapping (AZERTY — TODO)
+
+Second hardcoded layout with its own two `FrozenDictionary` tables and AZERTY-specific key labels.
+Layout selection via `appsettings.json` config. Labels in `PianoViewModel` must also switch per layout.
+
+### 5.5 — All Notes OFF (TODO)
+
+- `PianoEngine`: add `AllNotesOff()` method — releases all active notes
 - `FluidSynthAudioOutput`: sends All Notes Off MIDI message
-- Exposed as a button in the UI (simple addition to MainWindow)
+- Exposed as a button in the UI
 
-### 5.4 — Verification
-- Full keyboard mapping works for AZERTY layout
-- Shift+key plays sharps
-- Space key enables/disables sustain (notes ring while held)
+### 5.6 — Verification
+- Full keyboard mapping works for QWERTY layout
+- Shift+key plays sharps (silence when no sharp exists)
+- Shift release mid-hold sends correct NoteOff for the originally played note
+- Space key enables/disables sustain with Hold/InvertedHold/Toggle modes
 - All Notes OFF button silences everything
-- Changing layout in appsettings switches mapping
+- AZERTY layout selectable via appsettings, with correct labels
 
 ---
 
@@ -297,11 +329,10 @@ via Space key.
 
 These are planned but not detailed. Architecture must not block them.
 
-### Sustain Percentage & Fade (Refinement)
-- `PlaybackConfig`: add `SustainPercent` (0-100, default 100), `SustainFade` (0-100, default 0)
-- 0% = no sustain, 100% = infinite hold, 1-99% = time-based decay (80ms-2400ms curve)
-- Fade controls volume decay during sustain release
-- UI sliders for both values
+### Sustain Half-Pedal (Refinement)
+- CC64 supports values 0-127 natively (0-63 = off, 64-127 = on, with half-pedal in between)
+- FluidSynth handles partial sustain via intermediate CC64 values
+- Could expose a `SustainIntensity` (0-127) setting or UI slider that maps to the CC64 value
 
 ### Dark/Light Theme Toggle
 - `KlavierTheme` already has both color sets (from Iteration 4)
@@ -320,8 +351,13 @@ These are planned but not detailed. Architecture must not block them.
 
 ### Custom Keybinds
 - Interactive editor: click a piano key, then press desired keyboard key
+- During binding, capture both `PhysicalKey` (for input mapping) and `KeySymbol` (for label display)
+  from Avalonia's `KeyEventArgs` — no scancode-to-character conversion library needed
+- Each custom binding stores: `PhysicalKey` + `KeySymbol` (string) + `NotePitch`
 - Persisted as JSON in settings
 - Override default layout mapping
+- Avalonia has no standalone API to query PhysicalKey → character without a key event,
+  so the interactive binding step is the only reliable cross-platform way to get both
 
 ### MIDI Recording (Output)
 - New project: `Klavier.Midi/` with `DryWetMidi` dependency
@@ -338,7 +374,7 @@ These are planned but not detailed. Architecture must not block them.
 ### SharpHook (Background Keyboard Capture)
 - New project: `Klavier.GlobalInput/` with `SharpHook` dependency
 - Captures keyboard input even when Klavier window is not focused
-- Uses same Core `ScanCodeToNote` mapping
+- Uses same key mapping tables
 
 ---
 
