@@ -108,16 +108,21 @@ public class MainWindow : Window
 
             if (isOpen)
             {
-                _settingsRow.Height = new GridLength(_DefaultSettingsHeight);
+                settingsPanel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                double contentHeight = settingsPanel.DesiredSize.Height;
+
+                _settingsRow.Height = new GridLength(Math.Min(_DefaultSettingsHeight, contentHeight));
                 _settingsRow.MinHeight = _SettingsMinHeight;
+                _settingsRow.MaxHeight = contentHeight;
                 MinHeight = _MinHeight + _SettingsMinHeight + _SplitterHeight;
-                Height += _DefaultSettingsHeight + _SplitterHeight;
+                Height += _settingsRow.Height.Value + _SplitterHeight;
             }
             else
             {
                 double previousHeight = _settingsRow.Height.Value;
                 _settingsRow.Height = new GridLength(0);
                 _settingsRow.MinHeight = 0;
+                _settingsRow.MaxHeight = double.PositiveInfinity;
                 MinHeight = _MinHeight;
                 Height -= previousHeight + _SplitterHeight;
             }
