@@ -32,7 +32,7 @@ public class PianoViewModel : INoteEventHandler
         _pianoConfig.OnChange(OnPianoConfigChanged);
 
         UIConfig config = _uiConfig.CurrentValue;
-        short transpose = _pianoConfig.CurrentValue.Transpose;
+        Transpose transpose = new(_pianoConfig.CurrentValue.Transpose);
         FrozenDictionary<NotePitch, string> keyLabels = LoadKeyLabels(config.KeyboardLayout);
 
         List<PianoKeyViewModel> keys = [];
@@ -81,7 +81,7 @@ public class PianoViewModel : INoteEventHandler
 
     private void OnUIConfigChanged(UIConfig newConfig)
     {
-        short transpose = _pianoConfig.CurrentValue.Transpose;
+        Transpose transpose = new(_pianoConfig.CurrentValue.Transpose);
         FrozenDictionary<NotePitch, string> keyLabels = LoadKeyLabels(newConfig.KeyboardLayout);
 
         Dispatcher.UIThread.Post(() =>
@@ -105,7 +105,7 @@ public class PianoViewModel : INoteEventHandler
         {
             foreach (PianoKeyViewModel key in Keys)
             {
-                key.NoteLabel = NoteNames.GetNoteName(key.Pitch.Transpose(newConfig.Transpose), noteNameStyle);
+                key.NoteLabel = NoteNames.GetNoteName(key.Pitch.Transpose(new Transpose(newConfig.Transpose)), noteNameStyle);
             }
         });
     }

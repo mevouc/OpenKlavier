@@ -18,8 +18,8 @@ public readonly record struct NotePitch(ushort Value)
     public int SpnOctave => (Value / NotesPerOctave) - 1;
     public bool IsAccidental => NoteIndex is 1 or 3 or 6 or 8 or 10; // sharp or flat
 
-    public NotePitch Transpose(short semitones)
+    public NotePitch Transpose(Transpose transpose)
     {
-        return new NotePitch((ushort)Math.Clamp(Value + semitones, MinValue, MaxValue));
+        return new NotePitch((ushort)Math.Clamp(Value + transpose.Value, MinValue, MaxValue));
     }
 }

@@ -42,7 +42,7 @@ public class PianoEngine : IPianoEngine
             return;
         }
 
-        NotePitch soundingPitch = keyPitch.Transpose(_playbackConfig.CurrentValue.Transpose);
+        NotePitch soundingPitch = keyPitch.Transpose(new Transpose(_playbackConfig.CurrentValue.Transpose));
 
         if (_activeNotes.TryAdd(soundingPitch, 1))
         {
@@ -60,7 +60,7 @@ public class PianoEngine : IPianoEngine
 
     public void NoteOff(NotePitch keyPitch)
     {
-        NotePitch soundingPitch = keyPitch.Transpose(_playbackConfig.CurrentValue.Transpose);
+        NotePitch soundingPitch = keyPitch.Transpose(new Transpose(_playbackConfig.CurrentValue.Transpose));
 
         if (_activeNotes.TryGetValue(soundingPitch, out int activeCount))
         {

@@ -2,6 +2,8 @@ namespace Klavier.Config;
 
 public class UIConfig
 {
+    public const string SectionName = "UI";
+
     public bool Topmost { get; init; }
     public bool ShowKeyLabels { get; init; } = true;
     public bool ShowNoteLabels { get; init; } = true;

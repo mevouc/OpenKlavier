@@ -21,10 +21,10 @@ IHost host = Host.CreateDefaultBuilder(args)
     {
         IConfiguration configuration = context.Configuration;
 
-        services.Configure<PianoConfig>(configuration.GetSection("Piano"));
+        services.Configure<PianoConfig>(configuration.GetSection(PianoConfig.SectionName));
         services.AddSingleton<IPianoEngine, PianoEngine>();
-        services.AddFluidSynthAudio(configuration.GetSection("Audio"));
-        services.AddKlavierUI(configuration.GetSection("UI"));
+        services.AddFluidSynthAudio(configuration.GetSection(AudioConfig.SectionName));
+        services.AddKlavierUI(configuration.GetSection(UIConfig.SectionName));
     })
     .Build();
 

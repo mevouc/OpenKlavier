@@ -2,6 +2,8 @@ namespace Klavier.Config;
 
 public class AudioConfig
 {
+    public const string SectionName = "Audio";
+
     public string SoundFontPath { get; init; } = "C:\\Users\\mevouc\\Desktop\\GRAND PIANO.sf2";
     public string AudioDriver { get; init; } = "dsound";
     public string MinimumFluidSynthLogLevel { get; init; } = "Error";

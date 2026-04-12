@@ -15,6 +15,15 @@ public static class KeyboardMappingProvider
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
+    public static string[] GetAvailableLayouts()
+    {
+        string folder = Path.Combine(AppContext.BaseDirectory, _MappingsFolder);
+
+        return [.. Directory.GetFiles(folder, "*.json")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Order()!];
+    }
+
     public static KeyboardMapping Load(string layoutName)
     {
         string path = Path.Combine(AppContext.BaseDirectory, _MappingsFolder, $"{layoutName.ToLowerInvariant()}.json");
