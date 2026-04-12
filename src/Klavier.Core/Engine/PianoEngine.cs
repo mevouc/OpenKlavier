@@ -103,10 +103,19 @@ public class PianoEngine : IPianoEngine
         NotifyHandlers(handler => handler.OnSustainChanged(false));
     }
 
-    public void AllNotesOff()
+    public void Panic()
     {
-        _logger.LogInformation("All notes off");
         SustainOff();
+        AllNotesOff();
+    }
+
+    private void AllNotesOff()
+    {
+        if (_activeNotes.Count == 0)
+        {
+            return;
+        }
+        _logger.LogInformation("All notes off");
 
         for (ushort pitch = NotePitch.MinValue; pitch <= NotePitch.MaxValue; pitch++)
         {

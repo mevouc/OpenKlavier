@@ -10,5 +10,5 @@ public interface IPianoEngine
     void NoteOff(NotePitch keyPitch);
     void SustainOn();
     void SustainOff();
-    void AllNotesOff();
+    void Panic();
 }

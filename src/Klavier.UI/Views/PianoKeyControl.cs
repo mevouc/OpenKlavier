@@ -89,6 +89,9 @@ public class PianoKeyControl : Border
             case nameof(PianoKeyViewModel.IsPressed):
                 UpdateVisualState();
                 break;
+            case nameof(PianoKeyViewModel.KeyLabel):
+                _keyLabelText.Text = _viewModel.KeyLabel;
+                break;
             case nameof(PianoKeyViewModel.NoteLabel):
                 _noteLabelText.Text = _viewModel.NoteLabel;
                 break;

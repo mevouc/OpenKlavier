@@ -41,7 +41,7 @@ public class MainWindow : Window
         Background = new SolidColorBrush(KlavierTheme.AppBackground);
         Topmost = uiConfig.CurrentValue.Topmost;
 
-        uiConfig.OnChange(config => Topmost = config.Topmost);
+        uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
         // Top section: piano + toolbar
         Border separatorLine = new()

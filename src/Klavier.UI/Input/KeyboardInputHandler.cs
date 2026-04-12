@@ -12,17 +12,44 @@ public class KeyboardInputHandler
 {
     private readonly IPianoEngine _pianoEngine;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
-    private readonly KeyboardMapping _mapping;
+    private KeyboardMapping _mapping;
     private readonly Dictionary<PhysicalKey, NotePitch> _heldNotes = [];
     private bool _isSustainToggled;
+
+    private UIConfig _lastUiConfig;
 
     public KeyboardInputHandler(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig)
     {
         _pianoEngine = pianoEngine;
         _uiConfig = uiConfig;
         _mapping = KeyboardMappingProvider.Load(uiConfig.CurrentValue.KeyboardLayout);
+        _lastUiConfig = uiConfig.CurrentValue;
 
-        if (uiConfig.CurrentValue.SustainMode == SustainMode.InvertedHold)
+        ApplySustainMode(uiConfig.CurrentValue.SustainMode);
+        uiConfig.OnChange(OnUIConfigChanged);
+    }
+
+    private void OnUIConfigChanged(UIConfig newConfig)
+    {
+        if (newConfig.SustainMode != _lastUiConfig.SustainMode)
+        {
+            _isSustainToggled = false;
+            ApplySustainMode(newConfig.SustainMode);
+        }
+
+        if (newConfig.KeyboardLayout != _lastUiConfig.KeyboardLayout)
+        {
+            _mapping = KeyboardMappingProvider.Load(newConfig.KeyboardLayout);
+            _heldNotes.Clear();
+        }
+        _lastUiConfig = newConfig;
+    }
+
+    private void ApplySustainMode(SustainMode mode)
+    {
+        _pianoEngine.SustainOff();
+
+        if (mode == SustainMode.InvertedHold)
         {
             _pianoEngine.SustainOn();
         }
@@ -45,7 +72,7 @@ public class KeyboardInputHandler
         switch (key)
         {
             case PhysicalKey.Escape:
-                _pianoEngine.AllNotesOff();
+                _pianoEngine.Panic();
                 return true;
             case PhysicalKey.Space:
                 HandleSustainKeyDown();

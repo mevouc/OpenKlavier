@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Config;
+using Klavier.UI.Ports;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
 
@@ -18,6 +19,7 @@ public class SettingsPanel : Border
 
 
     public SettingsPanel(
+        IUserSettingsService settingsService,
         IOptionsMonitor<PianoConfig> pianoConfig,
         IOptionsMonitor<AudioConfig> audioConfig,
         IOptionsMonitor<UIConfig> uiConfig)
@@ -48,7 +50,86 @@ public class SettingsPanel : Border
             ["qwerty", "azerty", "dvorak-fr"],
             ui.KeyboardLayout);
 
+        // Wire sliders
+        velocitySlider.ValueChanged += (_, e) =>
+        {
+            int val = (int)e.NewValue;
+            velocityValue.Text = val.ToString();
+            settingsService.UpdateSetting("Piano", "Velocity", val);
+        };
+
+        transposeSlider.ValueChanged += (_, e) =>
+        {
+            int val = (int)e.NewValue;
+            transposeValue.Text = val.ToString();
+            settingsService.UpdateSetting("Piano", "Transpose", val);
+        };
+
+        volumeSlider.ValueChanged += (_, e) =>
+        {
+            int val = (int)e.NewValue;
+            volumeValue.Text = $"{val}%";
+            settingsService.UpdateSetting("Audio", "VolumeInPercent", val);
+        };
+
+        // Wire dropdowns
+        sustainModeCombo.SelectionChanged += (_, _) =>
+        {
+            if (sustainModeCombo.SelectedItem is SustainMode mode)
+            {
+                settingsService.UpdateSetting("UI", "SustainMode", mode.ToString());
+            }
+        };
+
+        noteNameStyleCombo.SelectionChanged += (_, _) =>
+        {
+            if (noteNameStyleCombo.SelectedItem is NoteNameStyle style)
+            {
+                settingsService.UpdateSetting("UI", "NoteNameStyle", style.ToString());
+            }
+        };
+
+        keyboardLayoutCombo.SelectionChanged += (_, _) =>
+        {
+            if (keyboardLayoutCombo.SelectedItem is string layout)
+            {
+                settingsService.UpdateSetting("UI", "KeyboardLayout", layout);
+            }
+        };
+
+        // Wire toggles
+        topmostToggle.IsCheckedChanged += (_, _) =>
+            settingsService.UpdateSetting("UI", "Topmost", topmostToggle.IsChecked == true);
+
+        keyLabelsToggle.IsCheckedChanged += (_, _) =>
+            settingsService.UpdateSetting("UI", "ShowKeyLabels", keyLabelsToggle.IsChecked == true);
+
+        noteLabelsToggle.IsCheckedChanged += (_, _) =>
+            settingsService.UpdateSetting("UI", "ShowNoteLabels", noteLabelsToggle.IsChecked == true);
+
+        // Wire reset
         ToolbarButton resetButton = new("Reset Defaults");
+        resetButton.PointerPressed += (_, e) =>
+        {
+            settingsService.ResetAll();
+
+            // Reset UI controls to current config values
+            PianoConfig resetPiano = pianoConfig.CurrentValue;
+            AudioConfig resetAudio = audioConfig.CurrentValue;
+            UIConfig resetUi = uiConfig.CurrentValue;
+
+            velocitySlider.Value = resetPiano.Velocity;
+            transposeSlider.Value = resetPiano.Transpose;
+            volumeSlider.Value = resetAudio.VolumeInPercent;
+            sustainModeCombo.SelectedItem = resetUi.SustainMode;
+            topmostToggle.IsChecked = resetUi.Topmost;
+            keyLabelsToggle.IsChecked = resetUi.ShowKeyLabels;
+            noteLabelsToggle.IsChecked = resetUi.ShowNoteLabels;
+            noteNameStyleCombo.SelectedItem = resetUi.NoteNameStyle;
+            keyboardLayoutCombo.SelectedItem = resetUi.KeyboardLayout;
+
+            e.Handled = true;
+        };
 
         Child = new ScrollViewer
         {
@@ -165,6 +246,7 @@ public class SettingsPanel : Border
             SelectedItem = selectedValue,
             VerticalAlignment = VerticalAlignment.Center,
             MinWidth = 120,
+            Focusable = false,
         };
 
         return comboBox;
@@ -178,6 +260,7 @@ public class SettingsPanel : Border
             SelectedItem = selectedValue,
             VerticalAlignment = VerticalAlignment.Center,
             MinWidth = 120,
+            Focusable = false,
         };
 
         return comboBox;
@@ -191,6 +274,8 @@ public class SettingsPanel : Border
             VerticalAlignment = VerticalAlignment.Center,
             OnContent = null,
             OffContent = null,
+            Focusable = false,
         };
     }
+
 }

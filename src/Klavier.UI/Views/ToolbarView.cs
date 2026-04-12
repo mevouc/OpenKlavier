@@ -21,7 +21,7 @@ public class ToolbarView : Border
         ToolbarButton panicButton = new("Panic");
         panicButton.PointerPressed += (_, e) =>
         {
-            pianoEngine.AllNotesOff();
+            pianoEngine.Panic();
             panicButton.IsActive = true;
             e.Handled = true;
         };
