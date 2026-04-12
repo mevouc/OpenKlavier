@@ -21,7 +21,8 @@ public class MainWindow : Window
     private const int _DefaultSettingsHeight = 200;
 
     private readonly KeyboardInputHandler _keyboardInput;
-    private readonly RowDefinition _splitterRow;
+    private readonly SettingsPanel _settingsPanel;
+    private readonly GridSplitter _splitter;
     private readonly RowDefinition _settingsRow;
 
     public MainWindow(
@@ -32,6 +33,7 @@ public class MainWindow : Window
         IOptionsMonitor<UIConfig> uiConfig)
     {
         _keyboardInput = keyboardInput;
+        _settingsPanel = settingsPanel;
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -44,24 +46,7 @@ public class MainWindow : Window
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
         // Top section: piano + toolbar
-        Border separatorLine = new()
-        {
-            Height = 1,
-            Background = new SolidColorBrush(KlavierTheme.Divider),
-        };
-
-        Grid separator = new()
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) },
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-            },
-        };
-        Grid.SetColumn(separatorLine, 1);
-        separator.Children.Add(separatorLine);
-
+        Grid separator = CreateCenteredSeparator();
         DockPanel.SetDock(toolbarView, Dock.Bottom);
         DockPanel.SetDock(separator, Dock.Bottom);
 
@@ -71,7 +56,7 @@ public class MainWindow : Window
         };
 
         // Grid splitter
-        GridSplitter splitter = new()
+        _splitter = new GridSplitter()
         {
             Height = _SplitterHeight,
             MinHeight = _SplitterHeight,
@@ -80,53 +65,74 @@ public class MainWindow : Window
             IsVisible = false,
         };
 
-        // Row definitions
+        // Layout: top section + splitter + settings panel
         RowDefinition topRow = new() { Height = new GridLength(1, GridUnitType.Star), MinHeight = _MinHeight };
-        _splitterRow = new RowDefinition { Height = GridLength.Auto };
+        RowDefinition splitterRow = new() { Height = GridLength.Auto };
         _settingsRow = new RowDefinition { Height = new GridLength(0), MinHeight = 0 };
+
+        Grid.SetRow(topSection, 0);
+        Grid.SetRow(_splitter, 1);
+        Grid.SetRow(_settingsPanel, 2);
+
+        Content = new Grid
+        {
+            RowDefinitions = { topRow, splitterRow, _settingsRow },
+            Children = { topSection, _splitter, _settingsPanel },
+        };
+
+        // Toggle settings
+        toolbarView.SettingsToggled += ToggleSettingsPanel;
+    }
+
+    private void ToggleSettingsPanel(bool isOpen)
+    {
+        _settingsPanel.IsVisible = isOpen;
+        _splitter.IsVisible = isOpen;
+
+        if (isOpen)
+        {
+            _settingsPanel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double contentHeight = _settingsPanel.DesiredSize.Height;
+
+            _settingsRow.Height = new GridLength(Math.Min(_DefaultSettingsHeight, contentHeight));
+            _settingsRow.MinHeight = _SettingsMinHeight;
+            _settingsRow.MaxHeight = contentHeight;
+            MinHeight = _MinHeight + _SettingsMinHeight + _SplitterHeight;
+            Height += _settingsRow.Height.Value + _SplitterHeight;
+        }
+        else
+        {
+            double previousHeight = _settingsRow.Height.Value;
+            _settingsRow.Height = new GridLength(0);
+            _settingsRow.MinHeight = 0;
+            _settingsRow.MaxHeight = double.PositiveInfinity;
+            MinHeight = _MinHeight;
+            Height -= previousHeight + _SplitterHeight;
+        }
+    }
+
+    private static Grid CreateCenteredSeparator()
+    {
+        Border line = new()
+        {
+            Height = 1,
+            Background = new SolidColorBrush(KlavierTheme.Divider),
+        };
 
         Grid grid = new()
         {
-            RowDefinitions = { topRow, _splitterRow, _settingsRow },
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) },
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+            },
         };
 
-        Grid.SetRow(topSection, 0);
-        Grid.SetRow(splitter, 1);
-        Grid.SetRow(settingsPanel, 2);
+        Grid.SetColumn(line, 1);
+        grid.Children.Add(line);
 
-        grid.Children.Add(topSection);
-        grid.Children.Add(splitter);
-        grid.Children.Add(settingsPanel);
-
-        Content = grid;
-
-        // Toggle settings
-        toolbarView.SettingsToggled += isOpen =>
-        {
-            settingsPanel.IsVisible = isOpen;
-            splitter.IsVisible = isOpen;
-
-            if (isOpen)
-            {
-                settingsPanel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                double contentHeight = settingsPanel.DesiredSize.Height;
-
-                _settingsRow.Height = new GridLength(Math.Min(_DefaultSettingsHeight, contentHeight));
-                _settingsRow.MinHeight = _SettingsMinHeight;
-                _settingsRow.MaxHeight = contentHeight;
-                MinHeight = _MinHeight + _SettingsMinHeight + _SplitterHeight;
-                Height += _settingsRow.Height.Value + _SplitterHeight;
-            }
-            else
-            {
-                double previousHeight = _settingsRow.Height.Value;
-                _settingsRow.Height = new GridLength(0);
-                _settingsRow.MinHeight = 0;
-                _settingsRow.MaxHeight = double.PositiveInfinity;
-                MinHeight = _MinHeight;
-                Height -= previousHeight + _SplitterHeight;
-            }
-        };
+        return grid;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
