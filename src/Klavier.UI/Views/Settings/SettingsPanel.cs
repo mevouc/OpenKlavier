@@ -15,7 +15,7 @@ namespace Klavier.UI.Views;
 
 public partial class SettingsPanel : Border
 {
-    private static readonly SolidColorBrush _TextBrush = new(KlavierTheme.TextPrimary);
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
     private const double _LabelWidth = 130;
     private const double _ValueWidth = 40;
     private const double _MinRowHeight = 32;
@@ -41,7 +41,7 @@ public partial class SettingsPanel : Border
     {
         _settingsService = settingsService;
 
-        Background = new SolidColorBrush(KlavierTheme.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(12, 8);
         IsVisible = false;
 

@@ -16,8 +16,8 @@ public class PianoKeyControl : Border
     private static readonly SolidColorBrush _BlackKeyBrush = new(PianoColors.BlackKey);
     private static readonly SolidColorBrush _BlackKeyPressedBrush = new(PianoColors.BlackKeyPressed);
     private static readonly SolidColorBrush _DefaultBorderBrush = new(PianoColors.KeyBorder);
-    private static readonly SolidColorBrush _ActiveBorderBrush = new(KlavierTheme.Accent);
-    private static readonly SolidColorBrush _ActiveTextBrush = new(KlavierTheme.Accent);
+    private static readonly SolidColorBrush _ActiveBorderBrush = new(ThemePaletteProvider.Accent);
+    private static readonly SolidColorBrush _ActiveTextBrush = new(ThemePaletteProvider.Accent);
     private static readonly SolidColorBrush _WhiteKeyTextBrush = new(Colors.Black);
     private static readonly SolidColorBrush _BlackKeyTextBrush = new(Colors.White);
 

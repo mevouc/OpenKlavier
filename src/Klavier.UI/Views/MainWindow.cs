@@ -42,7 +42,7 @@ public class MainWindow : Window
         Height = _DefaultHeight;
         MinWidth = _MinWidth;
         MinHeight = _MinHeight;
-        Background = new SolidColorBrush(KlavierTheme.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Topmost = uiConfig.CurrentValue.Topmost;
 
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
@@ -112,7 +112,7 @@ public class MainWindow : Window
         Border line = new()
         {
             Height = 1,
-            Background = new SolidColorBrush(KlavierTheme.Divider),
+            Background = new SolidColorBrush(ThemePaletteProvider.Divider),
         };
 
         Grid grid = new()

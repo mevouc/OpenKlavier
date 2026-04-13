@@ -2,7 +2,7 @@ using Avalonia.Media;
 
 namespace Klavier.UI.Theme;
 
-public static class KlavierTheme
+public static class ThemePaletteProvider
 {
     public static readonly Color AppBackground = Color.Parse("#1E1E1E");
     public static readonly Color PanelBackground = Color.Parse("#2D2D2D");

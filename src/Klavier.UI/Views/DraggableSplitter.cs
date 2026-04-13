@@ -8,8 +8,8 @@ namespace Klavier.UI.Views;
 
 public class DraggableSplitter
 {
-    private static readonly SolidColorBrush _DefaultBrush = new(KlavierTheme.Divider);
-    private static readonly SolidColorBrush _HoverBrush = new(KlavierTheme.Accent);
+    private static readonly SolidColorBrush _DefaultBrush = new(ThemePaletteProvider.Divider);
+    private static readonly SolidColorBrush _HoverBrush = new(ThemePaletteProvider.Accent);
 
     private readonly Border _leftLine;
     private readonly Border _rightLine;

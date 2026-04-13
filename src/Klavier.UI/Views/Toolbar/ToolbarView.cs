@@ -15,7 +15,7 @@ public class ToolbarView : Border
 
     public ToolbarView(IPianoEngine pianoEngine)
     {
-        Background = new SolidColorBrush(KlavierTheme.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(8, 4);
 
         ToolbarButton panicButton = new("Panic");

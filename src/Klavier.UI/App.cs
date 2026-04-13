@@ -13,13 +13,13 @@ public class App(
     public override void Initialize()
     {
         Styles.Add(new FluentTheme());
-        Resources["SystemAccentColor"] = KlavierTheme.Accent;
-        Resources["SystemAccentColorLight1"] = KlavierTheme.AccentLight1;
-        Resources["SystemAccentColorLight2"] = KlavierTheme.AccentLight2;
-        Resources["SystemAccentColorLight3"] = KlavierTheme.AccentLight3;
-        Resources["SystemAccentColorDark1"] = KlavierTheme.AccentDark1;
-        Resources["SystemAccentColorDark2"] = KlavierTheme.AccentDark2;
-        Resources["SystemAccentColorDark3"] = KlavierTheme.AccentDark3;
+        Resources["SystemAccentColor"] = ThemePaletteProvider.Accent;
+        Resources["SystemAccentColorLight1"] = ThemePaletteProvider.AccentLight1;
+        Resources["SystemAccentColorLight2"] = ThemePaletteProvider.AccentLight2;
+        Resources["SystemAccentColorLight3"] = ThemePaletteProvider.AccentLight3;
+        Resources["SystemAccentColorDark1"] = ThemePaletteProvider.AccentDark1;
+        Resources["SystemAccentColorDark2"] = ThemePaletteProvider.AccentDark2;
+        Resources["SystemAccentColorDark3"] = ThemePaletteProvider.AccentDark3;
     }
 
     public override void OnFrameworkInitializationCompleted()

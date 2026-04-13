@@ -16,11 +16,11 @@ public class SustainBarControl : Border
     private const string _SustainKeyLabel = "Space";
     private const string _SustainMusicLabel = "Sustain";
 
-    private static readonly SolidColorBrush _BackgroundBrush = new(KlavierTheme.PanelBackground);
-    private static readonly SolidColorBrush _DefaultBorderBrush = new(KlavierTheme.PanelBackground);
-    private static readonly SolidColorBrush _ActiveBorderBrush = new(KlavierTheme.Accent);
+    private static readonly SolidColorBrush _BackgroundBrush = new(ThemePaletteProvider.PanelBackground);
+    private static readonly SolidColorBrush _DefaultBorderBrush = new(ThemePaletteProvider.PanelBackground);
+    private static readonly SolidColorBrush _ActiveBorderBrush = new(ThemePaletteProvider.Accent);
     private static readonly SolidColorBrush _DefaultTextBrush = new(Colors.White);
-    private static readonly SolidColorBrush _ActiveTextBrush = new(KlavierTheme.Accent);
+    private static readonly SolidColorBrush _ActiveTextBrush = new(ThemePaletteProvider.Accent);
 
     private readonly IPianoEngine _pianoEngine;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
