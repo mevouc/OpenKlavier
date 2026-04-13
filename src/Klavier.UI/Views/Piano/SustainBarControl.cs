@@ -9,7 +9,7 @@ using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
 using Microsoft.Extensions.Options;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Piano;
 
 public class SustainBarControl : Border
 {

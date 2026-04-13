@@ -8,6 +8,7 @@ using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Ports;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -115,6 +116,7 @@ public partial class SettingsPanel : Border
             {
                 Orientation = Orientation.Vertical,
                 Spacing = 4,
+                Margin = new Thickness(0, 0, 16, 0),
                 Children =
                 {
                     CreateRow(_VelocityLabel, velocityValue, velocitySlider),

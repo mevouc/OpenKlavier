@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Klavier.Core.Primitives;
 using Klavier.UI.ViewModels;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Piano;
 
 public class PianoView : Panel
 {

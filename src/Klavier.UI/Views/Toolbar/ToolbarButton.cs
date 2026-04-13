@@ -5,7 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.UI.Theme;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Toolbar;
 
 public class ToolbarButton : Border
 {

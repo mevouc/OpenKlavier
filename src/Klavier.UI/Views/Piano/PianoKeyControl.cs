@@ -7,7 +7,7 @@ using Avalonia.Media;
 using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Piano;
 
 public class PianoKeyControl : Border
 {

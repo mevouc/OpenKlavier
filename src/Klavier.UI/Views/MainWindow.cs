@@ -6,6 +6,8 @@ using Klavier.UI.Input;
 using Klavier.Config;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
+using Klavier.UI.Views.Piano;
+using Klavier.UI.Views.Toolbar;
 
 namespace Klavier.UI.Views;
 
@@ -17,12 +19,12 @@ public class MainWindow : Window
     private const int _MinWidth = 700;
     private const int _MinHeight = 150;
     private const int _SettingsMinHeight = 150;
-    private const int _SplitterHeight = 1;
+    private const int _SplitterHeight = 8;
     private const int _DefaultSettingsHeight = 200;
 
     private readonly KeyboardInputHandler _keyboardInput;
     private readonly SettingsPanel _settingsPanel;
-    private readonly GridSplitter _splitter;
+    private readonly DraggableSplitter _splitter;
     private readonly RowDefinition _settingsRow;
 
     public MainWindow(
@@ -55,15 +57,8 @@ public class MainWindow : Window
             Children = { toolbarView, separator, pianoView },
         };
 
-        // Grid splitter
-        _splitter = new GridSplitter()
-        {
-            Height = _SplitterHeight,
-            MinHeight = _SplitterHeight,
-            MaxHeight = _SplitterHeight,
-            Background = new SolidColorBrush(KlavierTheme.Divider),
-            IsVisible = false,
-        };
+        // Draggable splitter between top section and settings panel
+        _splitter = new DraggableSplitter(_SplitterHeight);
 
         // Layout: top section + splitter + settings panel
         RowDefinition topRow = new() { Height = new GridLength(1, GridUnitType.Star), MinHeight = _MinHeight };
@@ -71,13 +66,14 @@ public class MainWindow : Window
         _settingsRow = new RowDefinition { Height = new GridLength(0), MinHeight = 0 };
 
         Grid.SetRow(topSection, 0);
-        Grid.SetRow(_splitter, 1);
+        Grid.SetRow(_splitter.HitArea, 1);
+        Grid.SetRow(_splitter.Visual, 1);
         Grid.SetRow(_settingsPanel, 2);
 
         Content = new Grid
         {
             RowDefinitions = { topRow, splitterRow, _settingsRow },
-            Children = { topSection, _splitter, _settingsPanel },
+            Children = { topSection, _splitter.HitArea, _splitter.Visual, _settingsPanel },
         };
 
         // Toggle settings

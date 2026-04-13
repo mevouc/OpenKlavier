@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.Toolbar;
 
 namespace Klavier.UI.Views;
 

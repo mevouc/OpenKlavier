@@ -4,6 +4,8 @@ using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Klavier.UI.Views.Piano;
+using Klavier.UI.Views.Toolbar;
 
 namespace Klavier.UI;
 
