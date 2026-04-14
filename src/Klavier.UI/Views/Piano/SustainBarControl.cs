@@ -19,7 +19,7 @@ public class SustainBarControl : Border
     private static readonly SolidColorBrush _BackgroundBrush = new(ThemePaletteProvider.PanelBackground);
     private static readonly SolidColorBrush _DefaultBorderBrush = new(ThemePaletteProvider.PanelBackground);
     private static readonly SolidColorBrush _ActiveBorderBrush = new(ThemePaletteProvider.Accent);
-    private static readonly SolidColorBrush _DefaultTextBrush = new(Colors.White);
+    private static readonly SolidColorBrush _DefaultTextBrush = new(ThemePaletteProvider.TextPrimary);
     private static readonly SolidColorBrush _ActiveTextBrush = new(ThemePaletteProvider.Accent);
 
     private readonly IPianoEngine _pianoEngine;

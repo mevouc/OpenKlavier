@@ -12,6 +12,7 @@ public class App(
 {
     public override void Initialize()
     {
+        RequestedThemeVariant = ThemePaletteProvider.Active.FluentVariant;
         Styles.Add(new FluentTheme());
         Resources["SystemAccentColor"] = ThemePaletteProvider.Accent;
         Resources["SystemAccentColorLight1"] = ThemePaletteProvider.AccentLight1;

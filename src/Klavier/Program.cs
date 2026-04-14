@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Klavier.UI.Theme;
 
 const string AppName = "Klavier";
 
@@ -38,6 +39,14 @@ engine.RegisterHandler(audio);
 // Register UI as a note event handler (key highlighting)
 PianoViewModel pianoViewModel = host.Services.GetRequiredService<PianoViewModel>();
 engine.RegisterHandler(pianoViewModel);
+
+// Set active theme before any views are created
+UIConfig uiConfig = host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<UIConfig>>().Value;
+ThemePaletteProvider.SetActive(uiConfig.Theme switch
+{
+    AppTheme.Light => ThemePaletteProvider.Light,
+    _ => ThemePaletteProvider.Dark,
+});
 
 try
 {
