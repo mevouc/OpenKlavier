@@ -28,6 +28,7 @@ public partial class SettingsPanel : Border
     private const string _ShowKeyLabelsLabel = "Show Key Labels";
     private const string _ShowNoteLabelsLabel = "Show Note Labels";
     private const string _NoteNameStyleLabel = "Note Name Style";
+    private const string _ThemeLabel = "Theme (restart)";
     private const string _KeyboardLayoutLabel = "Keyboard Layout";
     private const string _ResetDefaultsButtonLabel = "Reset Defaults";
 
@@ -63,6 +64,7 @@ public partial class SettingsPanel : Border
         ToggleSwitch keyLabelsToggle = CreateToggleSwitch(ui.ShowKeyLabels);
         ToggleSwitch noteLabelsToggle = CreateToggleSwitch(ui.ShowNoteLabels);
         ComboBox noteNameStyleCombo = CreateComboBox(ui.NoteNameStyle);
+        ComboBox themeCombo = CreateComboBox(ui.Theme);
         ComboBox keyboardLayoutCombo = CreateComboBox(
             KeyboardMappingProvider.GetAvailableLayouts(),
             ui.KeyboardLayout);
@@ -75,6 +77,7 @@ public partial class SettingsPanel : Border
         // Wire dropdowns
         WireComboBox(sustainModeCombo, UIConfig.SectionName, nameof(UIConfig.SustainMode));
         WireComboBox(noteNameStyleCombo, UIConfig.SectionName, nameof(UIConfig.NoteNameStyle));
+        WireComboBox(themeCombo, UIConfig.SectionName, nameof(UIConfig.Theme));
         WireComboBox(keyboardLayoutCombo, UIConfig.SectionName, nameof(UIConfig.KeyboardLayout));
 
         // Wire toggles
@@ -99,6 +102,7 @@ public partial class SettingsPanel : Border
             keyLabelsToggle.IsChecked = newUi.ShowKeyLabels;
             noteLabelsToggle.IsChecked = newUi.ShowNoteLabels;
             noteNameStyleCombo.SelectedItem = newUi.NoteNameStyle;
+            themeCombo.SelectedItem = newUi.Theme;
             keyboardLayoutCombo.SelectedItem = newUi.KeyboardLayout;
         }));
 
@@ -127,6 +131,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_ShowKeyLabelsLabel, keyLabelsToggle),
                     CreateRow(_ShowNoteLabelsLabel, noteLabelsToggle),
                     CreateRow(_NoteNameStyleLabel, noteNameStyleCombo),
+                    CreateRow(_ThemeLabel, themeCombo),
                     CreateRow(_KeyboardLayoutLabel, keyboardLayoutCombo),
                     CreateResetRow(resetButton),
                 },
