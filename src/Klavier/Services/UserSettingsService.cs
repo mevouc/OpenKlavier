@@ -32,14 +32,24 @@ public class UserSettingsService(string appName) : IUserSettingsService
         }
     }
 
-    public void UpdateSetting(string sectionName, string key, object value)
+    public void UpdateSetting(string keyPath, object value)
     {
         string json = File.ReadAllText(_filePath);
-        JsonNode root = JsonNode.Parse(json) ?? new JsonObject();
+        JsonObject root = JsonNode.Parse(json)?.AsObject() ?? [];
 
-        JsonObject section = root[sectionName]?.AsObject() ?? [];
-        section[key] = JsonSerializer.SerializeToNode(value);
-        root[sectionName] = section;
+        string[] segments = keyPath.Split(':');
+        JsonObject current = root;
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            JsonObject? child = current[segments[i]]?.AsObject();
+            if (child is null)
+            {
+                child = [];
+                current[segments[i]] = child;
+            }
+            current = child;
+        }
+        current[segments[^1]] = JsonSerializer.SerializeToNode(value);
 
         File.WriteAllText(_filePath, root.ToJsonString(_WriteOptions));
     }

@@ -70,7 +70,7 @@ public class FluidSynthAudioOutput : IAudioOutput
         _synthSettings[ConfigurationKeys.SynthGain].DoubleValue = _audioConfig.CurrentValue.GainFactor;
 
         _synth = new(_synthSettings);
-        _synth.LoadSoundFont(_audioConfig.CurrentValue.SoundFontPath, true);
+        _synth.LoadSoundFont(_audioConfig.CurrentValue.SoundFont.Path, true);
 
         _audioDriver = new(_synthSettings, _synth);
     }

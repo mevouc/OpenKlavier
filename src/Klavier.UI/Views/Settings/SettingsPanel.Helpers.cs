@@ -123,35 +123,35 @@ public partial class SettingsPanel
 
     private void WireSlider(
         Slider slider, TextBlock valueLabel,
-        string section, string key,
+        string keyPath,
         Func<int, string>? formatter = null)
     {
         slider.ValueChanged += (_, e) =>
         {
             int val = (int)e.NewValue;
             valueLabel.Text = formatter?.Invoke(val) ?? val.ToString();
-            _settingsService.UpdateSetting(section, key, val);
+            _settingsService.UpdateSetting(keyPath, val);
         };
     }
 
     private void WireComboBox(
         ComboBox comboBox,
-        string section, string key)
+        string keyPath)
     {
         comboBox.SelectionChanged += (_, _) =>
         {
             if (comboBox.SelectedItem is { } value)
             {
-                _settingsService.UpdateSetting(section, key, value.ToString()!);
+                _settingsService.UpdateSetting(keyPath, value.ToString()!);
             }
         };
     }
 
     private void WireToggle(
         ToggleSwitch toggle,
-        string section, string key)
+        string keyPath)
     {
         toggle.IsCheckedChanged += (_, _) =>
-            _settingsService.UpdateSetting(section, key, toggle.IsChecked == true);
+            _settingsService.UpdateSetting(keyPath, toggle.IsChecked == true);
     }
 }

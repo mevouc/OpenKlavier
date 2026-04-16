@@ -70,20 +70,20 @@ public partial class SettingsPanel : Border
             ui.KeyboardLayout);
 
         // Wire sliders
-        WireSlider(velocitySlider, velocityValue, PianoConfig.SectionName, nameof(PianoConfig.Velocity));
-        WireSlider(transposeSlider, transposeValue, PianoConfig.SectionName, nameof(PianoConfig.Transpose));
-        WireSlider(volumeSlider, volumeValue, AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent), val => $"{val}%");
+        WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
+        WireSlider(transposeSlider, transposeValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
+        WireSlider(volumeSlider, volumeValue, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
 
         // Wire dropdowns
-        WireComboBox(sustainModeCombo, UIConfig.SectionName, nameof(UIConfig.SustainMode));
-        WireComboBox(noteNameStyleCombo, UIConfig.SectionName, nameof(UIConfig.NoteNameStyle));
-        WireComboBox(themeCombo, UIConfig.SectionName, nameof(UIConfig.Theme));
-        WireComboBox(keyboardLayoutCombo, UIConfig.SectionName, nameof(UIConfig.KeyboardLayout));
+        WireComboBox(sustainModeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.SustainMode)));
+        WireComboBox(noteNameStyleCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.NoteNameStyle)));
+        WireComboBox(themeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
+        WireComboBox(keyboardLayoutCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
 
         // Wire toggles
-        WireToggle(topmostToggle, UIConfig.SectionName, nameof(UIConfig.Topmost));
-        WireToggle(keyLabelsToggle, UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels));
-        WireToggle(noteLabelsToggle, UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels));
+        WireToggle(topmostToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
+        WireToggle(keyLabelsToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels)));
+        WireToggle(noteLabelsToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels)));
 
         // Sync controls when config reloads (covers reset + external changes)
         pianoConfig.OnChange(newPiano => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
