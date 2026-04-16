@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Klavier.Config;
 using Klavier.Core.Engine;
 using Klavier.UI.Theme;
+using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views.Toolbar;
 
@@ -13,7 +15,7 @@ public class ToolbarView : Border
 
     public event Action<bool>? SettingsToggled;
 
-    public ToolbarView(IPianoEngine pianoEngine)
+    public ToolbarView(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig)
     {
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(8, 4);
@@ -22,6 +24,10 @@ public class ToolbarView : Border
         panicButton.PointerPressed += (_, e) =>
         {
             pianoEngine.Panic();
+            if (uiConfig.CurrentValue.SustainMode == SustainMode.InvertedHold)
+            {
+                pianoEngine.SustainOn();
+            }
             panicButton.IsActive = true;
             e.Handled = true;
         };

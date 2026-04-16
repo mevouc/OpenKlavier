@@ -48,7 +48,7 @@ public class MainWindow : Window
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
         // Top section: piano + toolbar
-        Grid separator = CreateCenteredSeparator();
+        Grid separator = CreatePianoSeparator();
         DockPanel.SetDock(toolbarView, Dock.Bottom);
         DockPanel.SetDock(separator, Dock.Bottom);
 
@@ -107,7 +107,7 @@ public class MainWindow : Window
         }
     }
 
-    private static Grid CreateCenteredSeparator()
+    private static Grid CreatePianoSeparator()
     {
         Border line = new()
         {

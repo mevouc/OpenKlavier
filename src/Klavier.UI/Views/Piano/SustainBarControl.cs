@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -11,22 +10,15 @@ using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views.Piano;
 
-public class SustainBarControl : Border
+public class SustainBarControl : ActivableControl
 {
     private const string _SustainKeyLabel = "Space";
     private const string _SustainMusicLabel = "Sustain";
-
-    private static readonly SolidColorBrush _BackgroundBrush = new(ThemePaletteProvider.PanelBackground);
-    private static readonly SolidColorBrush _DefaultBorderBrush = new(ThemePaletteProvider.PanelBackground);
-    private static readonly SolidColorBrush _ActiveBorderBrush = new(ThemePaletteProvider.Accent);
-    private static readonly SolidColorBrush _DefaultTextBrush = new(ThemePaletteProvider.TextPrimary);
-    private static readonly SolidColorBrush _ActiveTextBrush = new(ThemePaletteProvider.Accent);
 
     private readonly IPianoEngine _pianoEngine;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
     private readonly TextBlock _keyLabelText;
     private readonly TextBlock _musicLabelText;
-    private bool _isToggled;
 
     public SustainBarControl(
         IPianoEngine pianoEngine,
@@ -35,10 +27,6 @@ public class SustainBarControl : Border
     {
         _pianoEngine = pianoEngine;
         _uiConfig = uiConfig;
-
-        Background = _BackgroundBrush;
-        BorderThickness = new Thickness(2);
-        CornerRadius = new CornerRadius(Constants.CornerRadius);
 
         _keyLabelText = new TextBlock
         {
@@ -61,23 +49,18 @@ public class SustainBarControl : Border
             Children = { _keyLabelText, _musicLabelText },
         };
 
-        UpdateVisualState(pianoViewModel.IsSustainOn);
-        pianoViewModel.SustainChanged += OnSustainChanged;
+        IsActive = pianoViewModel.IsSustainOn;
+        pianoViewModel.SustainChanged += isOn => IsActive = isOn;
 
         PointerPressed += OnPointerPressed;
         PointerReleased += OnPointerReleased;
     }
 
-    private void OnSustainChanged(bool isOn)
+    protected override void OnActiveStateChanged(bool isActive)
     {
-        UpdateVisualState(isOn);
-    }
-
-    private void UpdateVisualState(bool isActive)
-    {
-        BorderBrush = isActive ? _ActiveBorderBrush : _DefaultBorderBrush;
-        _keyLabelText.Foreground = isActive ? _ActiveTextBrush : _DefaultTextBrush;
-        _musicLabelText.Foreground = isActive ? _ActiveTextBrush : _DefaultTextBrush;
+        SolidColorBrush brush = isActive ? ActiveTextBrush : DefaultTextBrush;
+        _keyLabelText.Foreground = brush;
+        _musicLabelText.Foreground = brush;
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -91,17 +74,7 @@ public class SustainBarControl : Border
                 _pianoEngine.SustainOff();
                 break;
             case SustainMode.Toggle:
-                _isToggled = !_isToggled;
-
-                if (_isToggled)
-                {
-                    _pianoEngine.SustainOn();
-                }
-                else
-                {
-                    _pianoEngine.SustainOff();
-                }
-
+                _pianoEngine.ToggleSustain();
                 break;
         }
 

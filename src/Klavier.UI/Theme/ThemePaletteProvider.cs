@@ -9,20 +9,20 @@ public static class ThemePaletteProvider
     {
         FluentVariant = ThemeVariant.Dark,
         AppBackground = Color.Parse("#1E1E1E"),
-        PanelBackground = Color.Parse("#2D2D2D"),
+        ControlBackground = Color.Parse("#333333"),
         TextPrimary = Color.Parse("#E0E0E0"),
         Accent = Color.Parse("#3A60BF"),
-        Divider = Color.Parse("#333333"),
+        Divider = Color.Parse("#2D2D2D"),
     };
 
     public static readonly ThemePalette Light = new()
     {
         FluentVariant = ThemeVariant.Light,
         AppBackground = Color.Parse("#F9F9F9"),
-        PanelBackground = Color.Parse("#E8E8E8"),
+        ControlBackground = Color.Parse("#DDDDDD"),
         TextPrimary = Color.Parse("#1E1E1E"),
         Accent = Color.Parse("#3A60BF"),
-        Divider = Color.Parse("#DDDDDD"),
+        Divider = Color.Parse("#E8E8E8"),
     };
 
     public static ThemePalette Active { get; private set; } = Dark;
@@ -30,7 +30,7 @@ public static class ThemePaletteProvider
     public static void SetActive(ThemePalette palette) => Active = palette;
 
     public static Color AppBackground => Active.AppBackground;
-    public static Color PanelBackground => Active.PanelBackground;
+    public static Color ControlBackground => Active.ControlBackground;
     public static Color TextPrimary => Active.TextPrimary;
     public static Color Accent => Active.Accent;
     public static Color Divider => Active.Divider;
@@ -40,4 +40,5 @@ public static class ThemePaletteProvider
     public static Color AccentDark1 => Active.AccentDark1;
     public static Color AccentDark2 => Active.AccentDark2;
     public static Color AccentDark3 => Active.AccentDark3;
+    public static Color ControlActiveBackground => Active.ControlActiveBackground;
 }

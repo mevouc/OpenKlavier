@@ -74,7 +74,7 @@ public partial class SettingsPanel
             Foreground = _TextBrush,
             FontSize = Constants.KeyLabelsFontSize,
             Width = _ValueWidth,
-            TextAlignment = TextAlignment.Right,
+            TextAlignment = TextAlignment.Left,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 0),
         };
@@ -90,6 +90,7 @@ public partial class SettingsPanel
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Margin = new Thickness(0, -12, 0, -12),
+            Focusable = false,
         };
     }
 

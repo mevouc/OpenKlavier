@@ -32,6 +32,7 @@ public class PianoKeyControl : Border
         BorderBrush = _DefaultBorderBrush;
         BorderThickness = new Thickness(1);
         CornerRadius = new CornerRadius(0, 0, Constants.CornerRadius, Constants.CornerRadius);
+        Cursor = new Cursor(StandardCursorType.Hand);
 
         SolidColorBrush textBrush = viewModel.IsBlack ? _BlackKeyTextBrush : _WhiteKeyTextBrush;
 

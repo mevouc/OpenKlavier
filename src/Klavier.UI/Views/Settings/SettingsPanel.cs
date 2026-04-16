@@ -114,7 +114,7 @@ public partial class SettingsPanel : Border
             e.Handled = true;
         };
 
-        Child = new ScrollViewer
+        ScrollViewer scrollViewer = new()
         {
             Content = new StackPanel
             {
@@ -137,5 +137,10 @@ public partial class SettingsPanel : Border
                 },
             },
         };
+        scrollViewer.AddHandler(
+            RequestBringIntoViewEvent,
+            (_, e) => e.Handled = true,
+            handledEventsToo: true);
+        Child = scrollViewer;
     }
 }

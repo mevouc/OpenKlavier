@@ -16,6 +16,8 @@ public class PianoEngine : IPianoEngine
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
     private bool _isSustainOn;
 
+    public bool IsSustainOn => _isSustainOn;
+
     public PianoEngine(
         IOptionsMonitor<PianoConfig> playbackConfig,
         ILogger<PianoEngine> logger)
@@ -101,6 +103,18 @@ public class PianoEngine : IPianoEngine
         _isSustainOn = false;
         _logger.LogInformation("Sustain off");
         NotifyHandlers(handler => handler.OnSustainChanged(false));
+    }
+
+    public void ToggleSustain()
+    {
+        if (_isSustainOn)
+        {
+            SustainOff();
+        }
+        else
+        {
+            SustainOn();
+        }
     }
 
     public void Panic()
