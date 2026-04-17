@@ -166,16 +166,91 @@ All changes in `src/Klavier.UI/Views/Settings/`.
 
 ## Iteration 11: Key Color Customization
 
-**Goal:** Let users customize the full color palette via hex code text fields.
+### Context
 
-- **Scope:** Full palette — keys, pressed states, background, toolbar, accent, text. Every color in `ThemePalette` is editable.
-- **UI:** Hex code text fields with a color preview swatch next to each field. Lives in the settings bar or an expanded section.
-- **Persistence:** Custom colors saved via the user settings file (iteration 6 infrastructure). Overrides the base theme.
+Today the piano uses five hardcoded colors in `src/Klavier.UI/Theme/PianoColors.cs` (WhiteKey, WhiteKeyPressed, BlackKey, BlackKeyPressed, KeyBorder), consumed only from `src/Klavier.UI/Views/Piano/PianoKeyControl.cs:14-18`. The theme's `Accent` is already used to tint the pressed-key borders/text in the same file (`PianoKeyControl.cs:19-20`). The `KeyPressed` variants look like the base key mixed toward the accent; if a computed blend reproduces the current feel, the statically-stored pressed colors become redundant, the palette shrinks, and the pressed states automatically follow any future accent change.
+
+**Goal:** Let users customize the piano key colors (and possibly the theme accent) via hex text fields in the settings panel. Changes are restart-required (consistent with the existing `Theme (restart)` row).
+
+### Scope (narrowed from original)
+
+- **Not** in scope: `AppBackground`, `NeutralSurface`, `ContrastedSurface`, `TextPrimary`, `Divider` (theme chrome stays theme-controlled).
+- **Definitely** in scope: `WhiteKey`, `BlackKey`, `KeyBorder` (3 base piano colors).
+- **Conditionally** in scope: `Accent` - decision deferred to after Step 1.
+- **Removed from the palette (if Step 1 succeeds):** `WhiteKeyPressed`, `BlackKeyPressed` become computed blends of their base color and `Accent`, no longer stored.
+- **Overrides are shared across themes** (one set, layered over whichever theme is active).
+- **Hex TextBox is the swatch**: the TextBox background itself is the current color; no separate rectangle.
+- **Validation**: revert-on-blur when the typed value is not a valid `#RRGGBB`.
+- **Live feedback**: background updates only when a complete valid hex is typed.
+
+### Step 1 - Replace pressed variants with computed blends from Accent
+
+Refactor `PianoColors` to compute `WhiteKeyPressed` and `BlackKeyPressed` via the existing `ThemePalette.Mix` helper (`src/Klavier.UI/Theme/ThemePalette.cs:40-46`), reading `Accent` from `ThemePaletteProvider`.
+
+- `src/Klavier.UI/Theme/PianoColors.cs`:
+  - Keep `WhiteKey`, `BlackKey`, `KeyBorder` as `static readonly Color`.
+  - Replace the two pressed-state fields with `static Color` properties returning a mix of base + `ThemePaletteProvider.Accent`.
+  - The `Mix` helper in `ThemePalette.cs` is currently `private static`; promote it to `public static` (or extract to a small `ColorMath` static class) so `PianoColors` can call it. Either is fine; chosen at implementation time.
+- `src/Klavier.UI/Views/Piano/PianoKeyControl.cs:15,17`:
+  - The two pressed brushes are `static readonly SolidColorBrush new(PianoColors.WhiteKeyPressed)`. Since `PianoColors.WhiteKeyPressed` is now a property, the brushes still capture the value once at static init (fine - restart-required already).
+- Find mix ratios visually matching the current values:
+  - Current: `WhiteKeyPressed = #D4DEF4` - plausible match: `Mix(WhiteKey #FAFAFA, Accent #3A60BF, 0.78)` ≈ `#D0D7EC`. Fine-tune at impl time.
+  - Current: `BlackKeyPressed = #0E1530` - current is more saturated than a simple linear mix of `#1C1C1C` and `#3A60BF`; may need a slightly higher accent weight (e.g., `Mix(BlackKey, Accent, 0.35)` or a darken-then-mix). Verify by eye.
+
+**Verification for Step 1:** run the app, press keys, confirm pressed colors look close to the current hardcoded values. If Accent is changed at design time, pressed states move with it.
+
+### Step 2 - Decide Accent inclusion; prototype the hex-TextBox control
+
+With pressed-state derivation working, decide whether `Accent` joins the editable set. If included, the editable list is **4 colors**: `WhiteKey`, `BlackKey`, `KeyBorder`, `Accent`. Otherwise **3 colors**.
+
+Prototype the hex-TextBox control on **one row only** so we agree on visuals before replicating:
+
+- `src/Klavier.UI/Views/Settings/SettingsPanel.Helpers.cs`:
+  - New `CreateHexColorTextBox(Color initialColor) -> TextBox`:
+    - `Text = $"#{color:X6}"`, max length 7, monospace-ish feel fine using the existing font.
+    - `Background = new SolidColorBrush(color)`.
+    - `Foreground = ContrastingTextColor(color)` - a small helper (luminance-based: white if (`0.299*R + 0.587*G + 0.114*B`) < 128, else black). Place alongside other helpers in this file.
+    - `BorderBrush` and `BorderThickness` kept minimal so the background reads as a swatch.
+  - Validation wiring (also in this file):
+    - On `TextChanged`: try `Color.Parse` on the current text; if valid and matches `^#[0-9A-Fa-f]{6}$`, update background + foreground **and** call `_settingsService.UpdateSetting(keyPath, hex)`. If invalid, do nothing visible.
+    - On `LostFocus`: if the current text is not a valid `#RRGGBB`, revert the TextBox's `Text` to the last-valid hex.
+- Single row inserted into `SettingsPanel.cs` for the prototype (e.g., `WhiteKey`), placed just above the Reset row. No config read yet - just demonstrates the control.
+
+**Verification for Step 2:** app runs, the prototype row shows the current WhiteKey as TextBox background, typing a valid hex updates the swatch, typing garbage and tabbing out reverts.
+
+### Step 3 - Config + startup override wiring + full row set
+
+Once Step 2's control is agreed:
+
+- `src/Klavier.Config/UIColorsConfig.cs` - new record/class with three (or four, if Accent) `string?` hex properties: `WhiteKey`, `BlackKey`, `KeyBorder`, (`Accent`). Nullable = "no override, use default".
+- `src/Klavier.Config/UIConfig.cs` - add nested property `UIColorsConfig Colors { get; init; } = new();`.
+- `src/Klavier/appsettings.json` - no entry needed (all nullable); user overrides live in `usersettings.json` under `UI:Colors:{Key}`.
+- Startup override injection - single read path, **before any UI is instantiated**:
+  - `src/Klavier.UI/Theme/PianoColors.cs` - expose an `Initialize(UIColorsConfig colors)` method that replaces the static backing values for `WhiteKey`, `BlackKey`, `KeyBorder` (refactor the existing `static readonly` fields into static properties backed by private fields so they can be assigned once at startup).
+  - `src/Klavier.UI/Theme/ThemePaletteProvider.cs` - if Accent is in scope, either clone `Active` with the override or add a parallel `OverrideAccent(Color)` method. Details at impl time.
+  - Caller wiring: in `src/Klavier.UI/ServiceCollectionExtensions.cs` or in `Program.cs` (wherever the host starts the UI), resolve `IOptions<UIConfig>` and call `PianoColors.Initialize(ui.Colors)` once, before any view is constructed.
+- Full row set in `SettingsPanel.cs`:
+  - Labels `"White Key (restart)"`, `"Black Key (restart)"`, `"Key Border (restart)"`, (`"Accent (restart)"`).
+  - Each row: label + `CreateHexColorTextBox` wired to `ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(UIColorsConfig.WhiteKey))` etc.
+  - Inserted after `Keyboard Layout` row, before `Reset Defaults`.
+  - Reset button already clears user settings (Iteration 6); after Reset, on restart the overrides are gone and defaults apply - no additional wiring needed.
+
+**Verification for Step 3:**
+1. Launch: color rows show current effective colors (defaults on first run, overrides on subsequent).
+2. Type a valid hex in a color row -> swatch updates, `usersettings.json` gets `UI:Colors:WhiteKey = "#XXXXXX"`. No live change to piano keys (restart-required).
+3. Restart -> piano keys use overridden colors. Pressed states (from Step 1) follow the override automatically (since they're computed blends).
+4. Type a garbage value -> swatch stays on last-valid, tabbing away reverts text.
+5. Reset Defaults -> on next restart, piano keys revert to built-in defaults; color rows reflect the same on reload.
+6. Existing settings (velocity, transpose, volume, soundfont, preset, toggles) still persist.
 
 ### Key files to modify/create
-- `src/Klavier.UI/Views/SettingsBarView.cs` — add color customization section
-- `src/Klavier.UI/Theme/ThemePalette.cs` — support user overrides
-- `src/Klavier.UI/Options/` — possible new config type for user colors
+- `src/Klavier.UI/Theme/PianoColors.cs` - refactor to computed pressed states + `Initialize` method
+- `src/Klavier.UI/Theme/ThemePalette.cs` - promote `Mix` to public (if chosen path)
+- `src/Klavier.Config/UIColorsConfig.cs` - new
+- `src/Klavier.Config/UIConfig.cs` - nested `Colors` property
+- `src/Klavier.UI/Views/Settings/SettingsPanel.cs` - new color rows
+- `src/Klavier.UI/Views/Settings/SettingsPanel.Helpers.cs` - `CreateHexColorTextBox`, validation, contrast helper
+- `src/Klavier.UI/ServiceCollectionExtensions.cs` or `src/Klavier/Program.cs` - call `PianoColors.Initialize` at startup
 
 ---
 
