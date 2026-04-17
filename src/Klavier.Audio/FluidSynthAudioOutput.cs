@@ -17,6 +17,8 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
     private readonly Settings _synthSettings;
     private readonly IOptionsMonitor<AudioConfig> _audioConfig;
     private readonly ILogger<FluidSynthAudioOutput> _logger;
+    // Kept rooted: NFluidsynth stores a raw function pointer native-side, so the delegate must survive GC.
+    private readonly Logger.LoggerDelegate _fluidSynthLoggerDelegate;
     private AudioConfig _lastAudioConfig;
     private Synth? _synth;
     private AudioDriver? _audioDriver;
@@ -39,15 +41,16 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
         _lastAudioConfig = _audioConfig.CurrentValue;
         _audioConfig.OnChange(OnAudioConfigChanged); // dynamically update volume/gain
 
-        ConfigureThirdPartyLogging();
+        _fluidSynthLoggerDelegate = CreateFluidSynthLoggerDelegate();
+        Logger.SetLoggerMethod(_fluidSynthLoggerDelegate);
         _synthSettings = new Settings();
     }
 
-    private void ConfigureThirdPartyLogging()
+    private Logger.LoggerDelegate CreateFluidSynthLoggerDelegate()
     {
         Logger.LogLevel minimumLogLevel = Enum.Parse<Logger.LogLevel>(_audioConfig.CurrentValue.MinimumFluidSynthLogLevel);
 
-        Logger.SetLoggerMethod((level, message, _) =>
+        return (level, message, _) =>
         {
             if (level <= minimumLogLevel)
             {
@@ -70,7 +73,7 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
                         break;
                 }
             }
-        });
+        };
     }
 
     public void Initialize()
