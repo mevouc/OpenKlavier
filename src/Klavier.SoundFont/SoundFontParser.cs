@@ -2,31 +2,77 @@ using System.Text;
 
 namespace Klavier.SoundFont;
 
-// Minimal SF2 parser: extracts the preset list (PHDR sub-chunk) from a SoundFont 2 file.
-// SF2 is a RIFF file (form type "sfbk") containing a "pdta" LIST whose "phdr" sub-chunk
-// holds 38-byte preset header records, the last being a sentinel terminator.
+// Minimal SF2 parser: extracts metadata from a SoundFont 2 file.
+// SF2 is a RIFF file (form type "sfbk"). Preset headers live in the "pdta" LIST -> "phdr" sub-chunk.
+// Bank display name lives in the "INFO" LIST -> "INAM" sub-chunk.
 public static class SoundFontParser
 {
     private const int _PhdrRecordSize = 38;
     private const int _PresetNameLength = 20;
 
-    public static IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> ParsePresets(string filePath)
+    // Opens the file once and extracts both bank name (INAM) and preset list (phdr) in a single pass.
+    // Throws InvalidDataException if the file is not a valid SoundFont or is missing the mandatory pdta LIST.
+    // Returns Name = null when INAM is absent or empty (valid SF2 without bank-name metadata).
+    public static SoundFontInfo ParseInfo(string filePath)
     {
-        using FileStream stream = File.OpenRead(filePath);
-        using BinaryReader reader = new(stream);
+        using BinaryReader reader = OpenSoundFontReader(filePath);
+        long fileEnd = reader.BaseStream.Length;
 
-        if (ReadFourCC(reader) != "RIFF")
+        string? name = null;
+        IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset>? presets = null;
+
+        while (reader.BaseStream.Position < fileEnd && (name is null || presets is null))
         {
-            throw new InvalidDataException($"Not a RIFF file: {filePath}");
-        }
-        reader.ReadUInt32();
-        if (ReadFourCC(reader) != "sfbk")
-        {
-            throw new InvalidDataException($"Not a SoundFont (sfbk) file: {filePath}");
+            string chunkId = ReadFourCC(reader);
+            uint size = reader.ReadUInt32();
+
+            if (chunkId != "LIST")
+            {
+                reader.BaseStream.Seek(size, SeekOrigin.Current);
+                continue;
+            }
+
+            string listType = ReadFourCC(reader);
+            long listEnd = reader.BaseStream.Position + size - 4;
+
+            if (listType == "INFO" && name is null)
+            {
+                name = ReadInamName(reader, listEnd);
+            }
+            else if (listType == "pdta" && presets is null)
+            {
+                presets = ReadPresets(reader, listEnd);
+            }
+
+            reader.BaseStream.Position = listEnd;
         }
 
-        long pdtaEnd = SkipToListChunk(reader, "pdta", stream.Length);
-        long phdrSize = SkipToSubChunk(reader, "phdr", pdtaEnd);
+        if (presets is null)
+        {
+            throw new InvalidDataException($"pdta LIST not found in {filePath}");
+        }
+
+        return new SoundFontInfo(name, presets);
+    }
+
+    private static string? ReadInamName(BinaryReader reader, long listEnd)
+    {
+        try
+        {
+            long inamSize = SkipToSubChunk(reader, "INAM", listEnd);
+            byte[] nameBytes = reader.ReadBytes((int)inamSize);
+            string value = ReadNullTerminated(nameBytes);
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+    }
+
+    private static IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> ReadPresets(BinaryReader reader, long listEnd)
+    {
+        long phdrSize = SkipToSubChunk(reader, "phdr", listEnd);
 
         if (phdrSize % _PhdrRecordSize != 0)
         {
@@ -57,32 +103,31 @@ public static class SoundFontParser
         return presets;
     }
 
+    private static BinaryReader OpenSoundFontReader(string filePath)
+    {
+        BinaryReader reader = new(File.OpenRead(filePath));
+        try
+        {
+            if (ReadFourCC(reader) != "RIFF")
+            {
+                throw new InvalidDataException($"Not a RIFF file: {filePath}");
+            }
+            reader.ReadUInt32();
+            if (ReadFourCC(reader) != "sfbk")
+            {
+                throw new InvalidDataException($"Not a SoundFont (sfbk) file: {filePath}");
+            }
+            return reader;
+        }
+        catch
+        {
+            reader.Dispose();
+            throw;
+        }
+    }
+
     private static string ReadFourCC(BinaryReader reader)
         => Encoding.ASCII.GetString(reader.ReadBytes(4));
-
-    private static long SkipToListChunk(BinaryReader reader, string listType, long fileEnd)
-    {
-        while (reader.BaseStream.Position < fileEnd)
-        {
-            string chunkId = ReadFourCC(reader);
-            uint size = reader.ReadUInt32();
-
-            if (chunkId == "LIST")
-            {
-                string type = ReadFourCC(reader);
-                if (type == listType)
-                {
-                    return reader.BaseStream.Position + size - 4;
-                }
-                reader.BaseStream.Seek(size - 4, SeekOrigin.Current);
-            }
-            else
-            {
-                reader.BaseStream.Seek(size, SeekOrigin.Current);
-            }
-        }
-        throw new InvalidDataException($"LIST '{listType}' not found");
-    }
 
     private static long SkipToSubChunk(BinaryReader reader, string subChunkId, long listEnd)
     {

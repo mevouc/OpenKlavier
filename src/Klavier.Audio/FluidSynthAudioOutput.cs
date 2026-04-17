@@ -8,7 +8,7 @@ using NFluidsynth;
 
 namespace Klavier.Audio;
 
-public class FluidSynthAudioOutput : IAudioOutput, ISoundFontPresetProvider
+public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
 {
     private const int _MidiChannel = 0;
     private const int _SustainController = 64; // MIDI CC64
@@ -21,14 +21,13 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontPresetProvider
     private Synth? _synth;
     private AudioDriver? _audioDriver;
     private uint _sfontId;
-    private IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> _presets =
-        new Dictionary<(int Bank, int Program), SoundFontPreset>();
+    private SoundFontInfo _info = new(null, new Dictionary<(int Bank, int Program), SoundFontPreset>());
 
     private bool _isDisposed;
 
-    public event Action? PresetsChanged;
+    public event Action? SoundFontInfoChanged;
 
-    public IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> GetPresets() => _presets;
+    public SoundFontInfo GetSoundFontInfo() => _info;
 
     public FluidSynthAudioOutput(
         IOptionsMonitor<AudioConfig> audioConfig,
@@ -95,11 +94,11 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontPresetProvider
         try
         {
             _sfontId = _synth.LoadSoundFont(soundFontConfig.Path, true);
-            _presets = SoundFontParser.ParsePresets(soundFontConfig.Path);
+            _info = SoundFontParser.ParseInfo(soundFontConfig.Path);
         }
         catch (InvalidDataException e)
         {
-            _logger.LogError(e, "Error parsing SoundFont presets: {Message}", e.Message);
+            _logger.LogError(e, "Error parsing SoundFont: {Message}", e.Message);
         }
         catch (Exception e)
         {
@@ -110,7 +109,7 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontPresetProvider
 
     private void ApplyPreset(SoundFontPresetConfig presetConfig)
     {
-        if (!_presets.ContainsKey((presetConfig.Bank, presetConfig.Program)))
+        if (!_info.Presets.ContainsKey((presetConfig.Bank, presetConfig.Program)))
         {
             _logger.LogError("SoundFont has no preset at bank {Bank} program {Program}", presetConfig.Bank, presetConfig.Program);
             return;
@@ -172,7 +171,7 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontPresetProvider
         {
             _synth?.UnloadSoundFont(_sfontId, true);
             LoadSoundFontAndApplyPreset(newConfig.SoundFont);
-            PresetsChanged?.Invoke();
+            SoundFontInfoChanged?.Invoke();
         }
         else if (newConfig.SoundFont.Preset.Bank != _lastAudioConfig.SoundFont.Preset.Bank
             || newConfig.SoundFont.Preset.Program != _lastAudioConfig.SoundFont.Preset.Program)

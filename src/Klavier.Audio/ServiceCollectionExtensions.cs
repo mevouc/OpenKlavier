@@ -16,7 +16,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<FluidSynthAudioOutput>();
         services.AddSingleton<IAudioOutput>(sp => sp.GetRequiredService<FluidSynthAudioOutput>());
-        services.AddSingleton<ISoundFontPresetProvider>(sp => sp.GetRequiredService<FluidSynthAudioOutput>());
+        services.AddSingleton<ISoundFontInfoProvider>(sp => sp.GetRequiredService<FluidSynthAudioOutput>());
 
         return services;
     }

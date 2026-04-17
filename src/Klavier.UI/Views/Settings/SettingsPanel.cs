@@ -38,7 +38,7 @@ public partial class SettingsPanel : Border
 
     public SettingsPanel(
         IUserSettingsService settingsService,
-        ISoundFontPresetProvider presetProvider,
+        ISoundFontInfoProvider soundFontInfoProvider,
         IOptionsMonitor<PianoConfig> pianoConfig,
         IOptionsMonitor<AudioConfig> audioConfig,
         IOptionsMonitor<UIConfig> uiConfig)
@@ -72,8 +72,8 @@ public partial class SettingsPanel : Border
             KeyboardMappingProvider.GetAvailableLayouts(),
             ui.KeyboardLayout);
 
-        IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> presets = presetProvider.GetPresets();
-        ComboBox presetCombo = CreateComboBox(presets.Values, FindPreset(presets, audio.SoundFont.Preset));
+        SoundFontInfo soundFontInfo = soundFontInfoProvider.GetSoundFontInfo();
+        ComboBox presetCombo = CreateComboBox(soundFontInfo.Presets.Values, FindPreset(soundFontInfo.Presets, audio.SoundFont.Preset));
 
         // Wire sliders
         WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
@@ -102,16 +102,16 @@ public partial class SettingsPanel : Border
         audioConfig.OnChange(newAudio => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             volumeSlider.Value = newAudio.VolumeInPercent;
-            SoundFontPreset? preset = FindPreset(presetProvider.GetPresets(), newAudio.SoundFont.Preset);
+            SoundFontPreset? preset = FindPreset(soundFontInfoProvider.GetSoundFontInfo().Presets, newAudio.SoundFont.Preset);
             if (preset.HasValue)
             {
                 presetCombo.SelectedItem = preset.Value;
             }
         }));
 
-        presetProvider.PresetsChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> updatedPresets = presetProvider.GetPresets();
+            IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> updatedPresets = soundFontInfoProvider.GetSoundFontInfo().Presets;
             presetCombo.ItemsSource = updatedPresets.Values;
             SoundFontPreset? preset = FindPreset(updatedPresets, audioConfig.CurrentValue.SoundFont.Preset);
             if (preset.HasValue)
