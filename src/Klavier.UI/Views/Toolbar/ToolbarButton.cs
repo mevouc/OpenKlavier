@@ -15,7 +15,7 @@ public class ToolbarButton : ActivableControl
         {
             Text = text,
             Foreground = DefaultTextBrush,
-            FontSize = Constants.KeyLabelsFontSize,
+            FontSize = Constants.PrimaryFontSize,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
         };

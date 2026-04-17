@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Config;
@@ -9,6 +8,7 @@ using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Ports;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +32,7 @@ public partial class SettingsPanel : Border
     private const string _ThemeLabel = "Theme (restart)";
     private const string _KeyboardLayoutLabel = "Keyboard Layout";
     private const string _PresetLabel = "Preset";
+    private const string _SoundFontLabel = "SoundFont";
     private const string _ResetDefaultsButtonLabel = "Reset Defaults";
 
     private readonly IUserSettingsService _settingsService;
@@ -75,6 +76,11 @@ public partial class SettingsPanel : Border
         SoundFontInfo soundFontInfo = soundFontInfoProvider.GetSoundFontInfo();
         ComboBox presetCombo = CreateComboBox(soundFontInfo.Presets.Values, FindPreset(soundFontInfo.Presets, audio.SoundFont.Preset));
 
+        (string soundFontDisplay, string? soundFontTooltip) = GetSoundFontDisplayName(soundFontInfo.Name, audio.SoundFont.Path);
+        TextBox soundFontPathDisplay = CreateSoundFontPathDisplay(soundFontDisplay, soundFontTooltip);
+        PathIconButton soundFontPickerButton = CreateSoundFontPickerButton();
+        Border soundFontPickerControl = CreateSoundFontPickerControl(soundFontPathDisplay, soundFontPickerButton);
+
         // Wire sliders
         WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
         WireSlider(transposeSlider, transposeValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
@@ -86,6 +92,7 @@ public partial class SettingsPanel : Border
         WireComboBox(themeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
         WireComboBox(keyboardLayoutCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
         WirePresetComboBox(presetCombo, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Preset)));
+        WireSoundFontPicker(soundFontPickerButton, audioConfig);
 
         // Wire toggles
         WireToggle(topmostToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
@@ -111,13 +118,16 @@ public partial class SettingsPanel : Border
 
         soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> updatedPresets = soundFontInfoProvider.GetSoundFontInfo().Presets;
-            presetCombo.ItemsSource = updatedPresets.Values;
-            SoundFontPreset? preset = FindPreset(updatedPresets, audioConfig.CurrentValue.SoundFont.Preset);
+            SoundFontInfo updatedInfo = soundFontInfoProvider.GetSoundFontInfo();
+            presetCombo.ItemsSource = updatedInfo.Presets.Values;
+            SoundFontPreset? preset = FindPreset(updatedInfo.Presets, audioConfig.CurrentValue.SoundFont.Preset);
             if (preset.HasValue)
             {
                 presetCombo.SelectedItem = preset.Value;
             }
+            (string display, string? tooltip) = GetSoundFontDisplayName(updatedInfo.Name, audioConfig.CurrentValue.SoundFont.Path);
+            soundFontPathDisplay.Text = display;
+            ToolTip.SetTip(soundFontPathDisplay, tooltip);
         });
 
         uiConfig.OnChange(newUi => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -151,6 +161,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_VelocityLabel, velocityValue, velocitySlider),
                     CreateRow(_TransposeLabel, transposeValue, transposeSlider),
                     CreateRow(_VolumeLabel, volumeValue, volumeSlider),
+                    CreateRow(_SoundFontLabel, soundFontPickerControl),
                     CreateRow(_PresetLabel, presetCombo),
                     CreateRow(_SustainModeLabel, sustainModeCombo),
                     CreateRow(_TopmostLabel, topmostToggle),
