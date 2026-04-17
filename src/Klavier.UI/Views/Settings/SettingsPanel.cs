@@ -17,6 +17,9 @@ namespace Klavier.UI.Views;
 public partial class SettingsPanel : Border
 {
     private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
+    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
+    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
     private const double _LabelWidth = 130;
     private const double _ValueWidth = 40;
     private const double _MinRowHeight = 32;
@@ -146,6 +149,12 @@ public partial class SettingsPanel : Border
         resetButton.PointerPressed += (_, e) =>
         {
             _settingsService.ResetAll();
+            resetButton.IsActive = true;
+            e.Handled = true;
+        };
+        resetButton.PointerReleased += (_, e) =>
+        {
+            resetButton.IsActive = false;
             e.Handled = true;
         };
 

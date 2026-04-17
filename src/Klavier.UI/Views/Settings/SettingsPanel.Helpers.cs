@@ -106,7 +106,7 @@ public partial class SettingsPanel
 
     private static ComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue)
     {
-        return new ComboBox
+        ComboBox comboBox = new()
         {
             ItemsSource = items,
             SelectedItem = selectedValue,
@@ -114,11 +114,15 @@ public partial class SettingsPanel
             MinWidth = 120,
             Focusable = false,
         };
+        comboBox.Resources["ComboBoxBackground"] = _ContrastedSurfaceBrush;
+        comboBox.Resources["ComboBoxBorderBrush"] = _NeutralSurfaceBrush;
+        comboBox.Resources["ComboBoxBorderBrushPointerOver"] = _HoverHighlightBrush;
+        return comboBox;
     }
 
     private static ToggleSwitch CreateToggleSwitch(bool isOn)
     {
-        return new ToggleSwitch
+        ToggleSwitch toggle = new()
         {
             IsChecked = isOn,
             VerticalAlignment = VerticalAlignment.Center,
@@ -126,6 +130,10 @@ public partial class SettingsPanel
             OffContent = null,
             Focusable = false,
         };
+        toggle.Resources["ToggleSwitchFillOff"] = _ContrastedSurfaceBrush;
+        toggle.Resources["ToggleSwitchStrokeOff"] = _NeutralSurfaceBrush;
+        toggle.Resources["ToggleSwitchStrokeOffPointerOver"] = _HoverHighlightBrush;
+        return toggle;
     }
 
     private void WireSlider(
@@ -215,8 +223,11 @@ public partial class SettingsPanel
     private static Border CreateSoundFontPickerControl(TextBox pathDisplay, Border pickerButton)
     {
         DockPanel.SetDock(pickerButton, Dock.Right);
-        Border outer = new()
+        return new Border
         {
+            Background = _ContrastedSurfaceBrush,
+            BorderBrush = _NeutralSurfaceBrush,
+            BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(Constants.CornerRadius),
             ClipToBounds = true,
             MinWidth = 200,
@@ -227,12 +238,6 @@ public partial class SettingsPanel
                 Children = { pickerButton, pathDisplay },
             },
         };
-        outer.Bind(Border.BackgroundProperty, outer.GetResourceObservable("ComboBoxBackground"));
-        outer.PointerEntered += (_, _) =>
-            outer.Bind(Border.BackgroundProperty, outer.GetResourceObservable("ComboBoxBackgroundPointerOver"));
-        outer.PointerExited += (_, _) =>
-            outer.Bind(Border.BackgroundProperty, outer.GetResourceObservable("ComboBoxBackground"));
-        return outer;
     }
 
     private static (string Display, string? Tooltip) GetSoundFontDisplayName(string? soundFontName, string filePath)
