@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Klavier.Config;
+using Klavier.SoundFont;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Toolbar;
 
@@ -97,7 +99,7 @@ public partial class SettingsPanel
     private static ComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
         => CreateComboBox(Enum.GetValues<TEnum>(), selectedValue);
 
-    private static ComboBox CreateComboBox(System.Collections.IEnumerable items, object selectedValue)
+    private static ComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue)
     {
         return new ComboBox
         {
@@ -153,5 +155,25 @@ public partial class SettingsPanel
     {
         toggle.IsCheckedChanged += (_, _) =>
             _settingsService.UpdateSetting(keyPath, toggle.IsChecked == true);
+    }
+
+    private void WirePresetComboBox(ComboBox comboBox, string presetKeyPath)
+    {
+        comboBox.SelectionChanged += (_, _) =>
+        {
+            if (comboBox.SelectedItem is SoundFontPreset preset)
+            {
+                _settingsService.UpdateSetting(presetKeyPath, new { preset.Bank, preset.Program });
+            }
+        };
+    }
+
+    private static SoundFontPreset? FindPreset(
+        IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> presets,
+        SoundFontPresetConfig config)
+    {
+        return presets.TryGetValue((config.Bank, config.Program), out SoundFontPreset preset)
+            ? preset
+            : null;
     }
 }

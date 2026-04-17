@@ -1,13 +1,14 @@
 ﻿using Klavier.Config;
 using Klavier.Core.Events;
 using Klavier.Core.Ports;
+using Klavier.SoundFont;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NFluidsynth;
 
 namespace Klavier.Audio;
 
-public class FluidSynthAudioOutput : IAudioOutput
+public class FluidSynthAudioOutput : IAudioOutput, ISoundFontPresetProvider
 {
     private const int _MidiChannel = 0;
     private const int _SustainController = 64; // MIDI CC64
@@ -19,8 +20,15 @@ public class FluidSynthAudioOutput : IAudioOutput
     private AudioConfig _lastAudioConfig;
     private Synth? _synth;
     private AudioDriver? _audioDriver;
+    private uint _sfontId;
+    private IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> _presets =
+        new Dictionary<(int Bank, int Program), SoundFontPreset>();
 
     private bool _isDisposed;
+
+    public event Action? PresetsChanged;
+
+    public IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> GetPresets() => _presets;
 
     public FluidSynthAudioOutput(
         IOptionsMonitor<AudioConfig> audioConfig,
@@ -44,20 +52,22 @@ public class FluidSynthAudioOutput : IAudioOutput
         {
             if (level <= minimumLogLevel)
             {
+                const string fluidSynthInternalLoggerMessage = "FluidSynth ({Level}): {Message}";
+
                 switch (level)
                 {
                     case Logger.LogLevel.Panic:
                     case Logger.LogLevel.Error:
-                        _logger.LogError("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogError(fluidSynthInternalLoggerMessage, level, message);
                         break;
                     case Logger.LogLevel.Warning:
-                        _logger.LogWarning("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogWarning(fluidSynthInternalLoggerMessage, level, message);
                         break;
                     case Logger.LogLevel.Information:
-                        _logger.LogInformation("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogInformation(fluidSynthInternalLoggerMessage, level, message);
                         break;
                     default:
-                        _logger.LogDebug("FluidSynth ({Level}): {Message}", level, message);
+                        _logger.LogDebug(fluidSynthInternalLoggerMessage, level, message);
                         break;
                 }
             }
@@ -70,9 +80,49 @@ public class FluidSynthAudioOutput : IAudioOutput
         _synthSettings[ConfigurationKeys.SynthGain].DoubleValue = _audioConfig.CurrentValue.GainFactor;
 
         _synth = new(_synthSettings);
-        _synth.LoadSoundFont(_audioConfig.CurrentValue.SoundFont.Path, true);
+        LoadSoundFontAndApplyPreset(_audioConfig.CurrentValue.SoundFont);
 
         _audioDriver = new(_synthSettings, _synth);
+    }
+
+    private void LoadSoundFontAndApplyPreset(SoundFontConfig soundFontConfig)
+    {
+        if (_synth is null)
+        {
+            _logger.LogError("Cannot load SoundFont: Synth not initialized");
+            return;
+        }
+        try
+        {
+            _sfontId = _synth.LoadSoundFont(soundFontConfig.Path, true);
+            _presets = SoundFontParser.ParsePresets(soundFontConfig.Path);
+        }
+        catch (InvalidDataException e)
+        {
+            _logger.LogError(e, "Error parsing SoundFont presets: {Message}", e.Message);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "NFluidsynth LoadSoundFont exception: {Message}", e.Message);
+        }
+        ApplyPreset(soundFontConfig.Preset);
+    }
+
+    private void ApplyPreset(SoundFontPresetConfig presetConfig)
+    {
+        if (!_presets.ContainsKey((presetConfig.Bank, presetConfig.Program)))
+        {
+            _logger.LogError("SoundFont has no preset at bank {Bank} program {Program}", presetConfig.Bank, presetConfig.Program);
+            return;
+        }
+        try
+        {
+            _synth?.ProgramSelect(_MidiChannel, _sfontId, (uint)presetConfig.Bank, (uint)presetConfig.Program);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "NFluidSynth ProgramSelect exception: {Message}", e.Message);
+        }
     }
 
     public void OnNoteOn(NoteOnEvent noteOnEvent)
@@ -117,6 +167,19 @@ public class FluidSynthAudioOutput : IAudioOutput
         {
             _synth?.Gain = newConfig.GainFactor;
         }
+
+        if (newConfig.SoundFont.Path != _lastAudioConfig.SoundFont.Path)
+        {
+            _synth?.UnloadSoundFont(_sfontId, true);
+            LoadSoundFontAndApplyPreset(newConfig.SoundFont);
+            PresetsChanged?.Invoke();
+        }
+        else if (newConfig.SoundFont.Preset.Bank != _lastAudioConfig.SoundFont.Preset.Bank
+            || newConfig.SoundFont.Preset.Program != _lastAudioConfig.SoundFont.Preset.Program)
+        {
+            ApplyPreset(newConfig.SoundFont.Preset);
+        }
+
         _lastAudioConfig = newConfig;
     }
 
