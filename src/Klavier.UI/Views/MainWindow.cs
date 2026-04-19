@@ -45,6 +45,7 @@ public class MainWindow : Window
         MinHeight = _MinHeight;
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Topmost = uiConfig.CurrentValue.Topmost;
+        Focusable = true;
 
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
@@ -85,7 +86,7 @@ public class MainWindow : Window
         {
             if (e.Source is not TextBox)
             {
-                FocusManager?.ClearFocus();
+                Focus();
             }
         }, RoutingStrategies.Tunnel);
     }

@@ -383,7 +383,7 @@ public partial class SettingsPanel
         {
             if (e.Key == Key.Enter || e.Key == Key.Escape)
             {
-                TopLevel.GetTopLevel(textBox)?.FocusManager?.ClearFocus();
+                TopLevel.GetTopLevel(textBox)?.Focus();
                 e.Handled = true;
             }
         };
