@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Klavier.UI.Input;
 using Klavier.Config;
@@ -78,6 +79,15 @@ public class MainWindow : Window
 
         // Toggle settings
         toolbarView.SettingsToggled += ToggleSettingsPanel;
+
+        // Blur any focused TextBox on a pointer click outside of it (commits the value via LostFocus).
+        AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (e.Source is not TextBox)
+            {
+                FocusManager?.ClearFocus();
+            }
+        }, RoutingStrategies.Tunnel);
     }
 
     private void ToggleSettingsPanel(bool isOpen)
@@ -133,14 +143,20 @@ public class MainWindow : Window
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        e.Handled = _keyboardInput.HandleKeyDown(e.PhysicalKey, e.KeyModifiers);
+        if (e.Source is not TextBox)
+        {
+            e.Handled = _keyboardInput.HandleKeyDown(e.PhysicalKey, e.KeyModifiers);
+        }
 
         base.OnKeyDown(e);
     }
 
     protected override void OnKeyUp(KeyEventArgs e)
     {
-        e.Handled = _keyboardInput.HandleKeyUp(e.PhysicalKey);
+        if (e.Source is not TextBox)
+        {
+            e.Handled = _keyboardInput.HandleKeyUp(e.PhysicalKey);
+        }
 
         base.OnKeyUp(e);
     }

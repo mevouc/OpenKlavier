@@ -32,7 +32,7 @@ public abstract class ActivableControl : Border
     {
         Background = _DefaultBackgroundBrush;
         BorderBrush = _DefaultBorderBrush;
-        BorderThickness = new Thickness(2);
+        BorderThickness = new Thickness(1);
         CornerRadius = new CornerRadius(Constants.CornerRadius);
         Cursor = new Cursor(StandardCursorType.Hand);
 

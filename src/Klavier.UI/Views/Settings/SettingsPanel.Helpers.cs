@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -113,9 +114,9 @@ public partial class SettingsPanel
             VerticalAlignment = VerticalAlignment.Center,
             MinWidth = 120,
             Focusable = false,
+            Background = _ContrastedSurfaceBrush,
+            BorderBrush = _NeutralSurfaceBrush,
         };
-        comboBox.Resources["ComboBoxBackground"] = _ContrastedSurfaceBrush;
-        comboBox.Resources["ComboBoxBorderBrush"] = _NeutralSurfaceBrush;
         comboBox.Resources["ComboBoxBorderBrushPointerOver"] = _HoverHighlightBrush;
         return comboBox;
     }
@@ -326,5 +327,89 @@ public partial class SettingsPanel
             return (0, 0);
         }
         return presets.Keys.Min();
+    }
+
+    private static TextBox CreateHexColorTextBox(Color initialColor)
+    {
+        string lastValidHex = FormatHex(initialColor);
+        TextBox textBox = new()
+        {
+            Text = lastValidHex,
+            MaxLength = 7,
+            MinWidth = 100,
+            FontSize = Constants.PrimaryFontSize,
+            BorderBrush = _NeutralSurfaceBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        textBox.Resources["TextControlBorderBrushPointerOver"] = _HoverHighlightBrush;
+        ApplyHexTextBoxColor(textBox, initialColor);
+
+        textBox.TextChanged += (_, _) =>
+        {
+            if (TryParseHex(textBox.Text, out Color parsed))
+            {
+                lastValidHex = textBox.Text!;
+                ApplyHexTextBoxColor(textBox, parsed);
+            }
+        };
+        textBox.LostFocus += (_, _) =>
+        {
+            if (!TryParseHex(textBox.Text, out _))
+            {
+                textBox.Text = lastValidHex;
+            }
+            UpdateHexTextBoxForeground(textBox);
+        };
+        textBox.GotFocus += (_, _) => UpdateHexTextBoxForeground(textBox);
+        textBox.PointerEntered += (_, _) => UpdateHexTextBoxForeground(textBox);
+        textBox.PointerExited += (_, _) => UpdateHexTextBoxForeground(textBox);
+        textBox.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter || e.Key == Key.Escape)
+            {
+                TopLevel.GetTopLevel(textBox)?.FocusManager?.ClearFocus();
+                e.Handled = true;
+            }
+        };
+
+        return textBox;
+    }
+
+    private static void ApplyHexTextBoxColor(TextBox textBox, Color color)
+    {
+        SolidColorBrush normalBg = new(color);
+        SolidColorBrush normalFg = new(GetContrastingTextColor(color));
+        textBox.Background = normalBg;
+        textBox.SelectionBrush = normalFg;
+        textBox.SelectionForegroundBrush = normalBg;
+        textBox.Resources["TextControlBackgroundPointerOver"] = normalFg;
+        textBox.Resources["TextControlBackgroundFocused"] = normalBg;
+        UpdateHexTextBoxForeground(textBox);
+    }
+
+    private static void UpdateHexTextBoxForeground(TextBox textBox)
+    {
+        bool swap = textBox.IsPointerOver && !textBox.IsFocused;
+        textBox.Foreground = swap ? textBox.Background : textBox.SelectionBrush;
+    }
+
+    private static string FormatHex(Color color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
+    private static bool TryParseHex(string? text, out Color color)
+    {
+        color = default;
+        if (text is null || text.Length != 7 || text[0] != '#')
+        {
+            return false;
+        }
+        return Color.TryParse(text, out color);
+    }
+
+    private static Color GetContrastingTextColor(Color background)
+    {
+        double luminance = (0.299 * background.R) + (0.587 * background.G) + (0.114 * background.B);
+        Color towards = luminance < 128 ? Colors.White : Colors.Black;
+        return ThemePalette.Mix(background, towards, 0.35);
     }
 }

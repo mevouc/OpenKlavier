@@ -36,6 +36,7 @@ public partial class SettingsPanel : Border
     private const string _KeyboardLayoutLabel = "Keyboard Layout";
     private const string _PresetLabel = "Preset";
     private const string _SoundFontLabel = "SoundFont";
+    private const string _AccentLabel = "Accent (restart)";
     private const string _ResetDefaultsButtonLabel = "Reset Defaults";
 
     private readonly IUserSettingsService _settingsService;
@@ -83,6 +84,8 @@ public partial class SettingsPanel : Border
         TextBox soundFontPathDisplay = CreateSoundFontPathDisplay(soundFontDisplay, soundFontTooltip);
         PathIconButton soundFontPickerButton = CreateSoundFontPickerButton();
         Border soundFontPickerControl = CreateSoundFontPickerControl(soundFontPathDisplay, soundFontPickerButton);
+
+        TextBox accentHexTextBox = CreateHexColorTextBox(ThemePaletteProvider.Accent);
 
         // Wire sliders
         WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
@@ -179,6 +182,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_NoteNameStyleLabel, noteNameStyleCombo),
                     CreateRow(_ThemeLabel, themeCombo),
                     CreateRow(_KeyboardLayoutLabel, keyboardLayoutCombo),
+                    CreateRow(_AccentLabel, accentHexTextBox),
                     CreateResetRow(resetButton),
                 },
             },

@@ -37,7 +37,7 @@ public class ThemePalette
             ClampByte(color.B * (1 - amount)));
     }
 
-    private static Color Mix(Color a, Color b, double aWeight)
+    public static Color Mix(Color a, Color b, double aWeight)
     {
         return Color.FromRgb(
             ClampByte((a.R * aWeight) + (b.R * (1 - aWeight))),
