@@ -11,4 +11,5 @@ public class UIConfig
     public NoteNameStyle NoteNameStyle { get; init; } = NoteNameStyle.Scientific;
     public SustainMode SustainMode { get; init; } = SustainMode.Hold;
     public string KeyboardLayout { get; init; } = "qwerty";
+    public ColorsConfig Colors { get; init; } = new();
 }

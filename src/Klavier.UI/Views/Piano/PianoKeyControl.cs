@@ -11,11 +11,11 @@ namespace Klavier.UI.Views.Piano;
 
 public class PianoKeyControl : Border
 {
-    private static readonly SolidColorBrush _WhiteKeyBrush = new(PianoColors.WhiteKey);
-    private static readonly SolidColorBrush _WhiteKeyPressedBrush = new(PianoColors.WhiteKeyPressed);
-    private static readonly SolidColorBrush _BlackKeyBrush = new(PianoColors.BlackKey);
-    private static readonly SolidColorBrush _BlackKeyPressedBrush = new(PianoColors.BlackKeyPressed);
-    private static readonly SolidColorBrush _DefaultBorderBrush = new(PianoColors.KeyBorder);
+    private static readonly SolidColorBrush _WhiteKeyBrush = new(UserPalette.WhiteKey);
+    private static readonly SolidColorBrush _WhiteKeyPressedBrush = new(UserPalette.WhiteKeyPressed);
+    private static readonly SolidColorBrush _BlackKeyBrush = new(UserPalette.BlackKey);
+    private static readonly SolidColorBrush _BlackKeyPressedBrush = new(UserPalette.BlackKeyPressed);
+    private static readonly SolidColorBrush _DefaultBorderBrush = new(UserPalette.KeyBorder);
     private static readonly SolidColorBrush _ActiveBorderBrush = new(ThemePaletteProvider.Accent);
     private static readonly SolidColorBrush _ActiveTextBrush = new(ThemePaletteProvider.Accent);
     private static readonly SolidColorBrush _WhiteKeyTextBrush = new(Colors.Black);

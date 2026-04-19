@@ -171,6 +171,21 @@ public partial class SettingsPanel
             _settingsService.UpdateSetting(keyPath, toggle.IsChecked == true);
     }
 
+    private void WireHexColorTextBox(TextBox textBox, string keyPath)
+    {
+        textBox.TextChanged += (_, _) =>
+        {
+            if (!textBox.IsFocused)
+            {
+                return;
+            }
+            if (TryParseHex(textBox.Text, out _))
+            {
+                _settingsService.UpdateSetting(keyPath, textBox.Text!);
+            }
+        };
+    }
+
     private void WirePresetComboBox(ComboBox comboBox, string presetKeyPath)
     {
         comboBox.SelectionChanged += (_, _) =>
@@ -410,6 +425,6 @@ public partial class SettingsPanel
     {
         double luminance = (0.299 * background.R) + (0.587 * background.G) + (0.114 * background.B);
         Color towards = luminance < 128 ? Colors.White : Colors.Black;
-        return ThemePalette.Mix(background, towards, 0.35);
+        return ColorMath.Mix(background, towards, 0.35);
     }
 }

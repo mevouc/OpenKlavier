@@ -32,11 +32,14 @@ public partial class SettingsPanel : Border
     private const string _ShowKeyLabelsLabel = "Show Key Labels";
     private const string _ShowNoteLabelsLabel = "Show Note Labels";
     private const string _NoteNameStyleLabel = "Note Name Style";
-    private const string _ThemeLabel = "Theme (restart)";
-    private const string _KeyboardLayoutLabel = "Keyboard Layout";
     private const string _PresetLabel = "Preset";
     private const string _SoundFontLabel = "SoundFont";
+    private const string _ThemeLabel = "Theme (restart)";
     private const string _AccentLabel = "Accent (restart)";
+    private const string _WhiteKeyLabel = "White Key (restart)";
+    private const string _BlackKeyLabel = "Black Key (restart)";
+    private const string _KeyBorderLabel = "Key Border (restart)";
+    private const string _KeyboardLayoutLabel = "Keyboard Layout";
     private const string _ResetDefaultsButtonLabel = "Reset Defaults";
 
     private readonly IUserSettingsService _settingsService;
@@ -85,7 +88,10 @@ public partial class SettingsPanel : Border
         PathIconButton soundFontPickerButton = CreateSoundFontPickerButton();
         Border soundFontPickerControl = CreateSoundFontPickerControl(soundFontPathDisplay, soundFontPickerButton);
 
-        TextBox accentHexTextBox = CreateHexColorTextBox(ThemePaletteProvider.Accent);
+        TextBox accentHexTextBox = CreateHexColorTextBox(UserPalette.Accent);
+        TextBox whiteKeyHexTextBox = CreateHexColorTextBox(UserPalette.WhiteKey);
+        TextBox blackKeyHexTextBox = CreateHexColorTextBox(UserPalette.BlackKey);
+        TextBox keyBorderHexTextBox = CreateHexColorTextBox(UserPalette.KeyBorder);
 
         // Wire sliders
         WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
@@ -104,6 +110,12 @@ public partial class SettingsPanel : Border
         WireToggle(topmostToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
         WireToggle(keyLabelsToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels)));
         WireToggle(noteLabelsToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels)));
+
+        // Wire color hex textboxes
+        WireHexColorTextBox(accentHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.Accent)));
+        WireHexColorTextBox(whiteKeyHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.WhiteKey)));
+        WireHexColorTextBox(blackKeyHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.BlackKey)));
+        WireHexColorTextBox(keyBorderHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.KeyBorder)));
 
         // Sync controls when config reloads (covers reset + external changes)
         pianoConfig.OnChange(newPiano => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -181,8 +193,11 @@ public partial class SettingsPanel : Border
                     CreateRow(_ShowNoteLabelsLabel, noteLabelsToggle),
                     CreateRow(_NoteNameStyleLabel, noteNameStyleCombo),
                     CreateRow(_ThemeLabel, themeCombo),
-                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutCombo),
                     CreateRow(_AccentLabel, accentHexTextBox),
+                    CreateRow(_WhiteKeyLabel, whiteKeyHexTextBox),
+                    CreateRow(_BlackKeyLabel, blackKeyHexTextBox),
+                    CreateRow(_KeyBorderLabel, keyBorderHexTextBox),
+                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutCombo),
                     CreateResetRow(resetButton),
                 },
             },

@@ -12,7 +12,6 @@ public static class ThemePaletteProvider
         NeutralSurface = Color.Parse("#333333"),
         ContrastedSurface = Color.Parse("#101010"),
         TextPrimary = Color.Parse("#E0E0E0"),
-        Accent = Color.Parse("#3A60BF"),
         Divider = Color.Parse("#2D2D2D"),
     };
 
@@ -23,7 +22,6 @@ public static class ThemePaletteProvider
         NeutralSurface = Color.Parse("#DDDDDD"),
         ContrastedSurface = Color.Parse("#FAFAFA"),
         TextPrimary = Color.Parse("#1E1E1E"),
-        Accent = Color.Parse("#3A60BF"),
         Divider = Color.Parse("#E8E8E8"),
     };
 
@@ -35,13 +33,13 @@ public static class ThemePaletteProvider
     public static Color NeutralSurface => Active.NeutralSurface;
     public static Color ContrastedSurface => Active.ContrastedSurface;
     public static Color TextPrimary => Active.TextPrimary;
-    public static Color Accent => Active.Accent;
     public static Color Divider => Active.Divider;
-    public static Color AccentLight1 => Active.AccentLight1;
-    public static Color AccentLight2 => Active.AccentLight2;
-    public static Color AccentLight3 => Active.AccentLight3;
-    public static Color AccentDark1 => Active.AccentDark1;
-    public static Color AccentDark2 => Active.AccentDark2;
-    public static Color AccentDark3 => Active.AccentDark3;
-    public static Color HoverHighlight => Active.HoverHighlight;
+    public static Color Accent => UserPalette.Accent;
+    public static Color AccentLight1 => UserPalette.AccentLight1;
+    public static Color AccentLight2 => UserPalette.AccentLight2;
+    public static Color AccentLight3 => UserPalette.AccentLight3;
+    public static Color AccentDark1 => UserPalette.AccentDark1;
+    public static Color AccentDark2 => UserPalette.AccentDark2;
+    public static Color AccentDark3 => UserPalette.AccentDark3;
+    public static Color HoverHighlight => ColorMath.Mix(UserPalette.Accent, Active.NeutralSurface, 0.15);
 }

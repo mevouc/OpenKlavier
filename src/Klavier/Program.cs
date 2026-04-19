@@ -40,13 +40,14 @@ engine.RegisterHandler(audio);
 PianoViewModel pianoViewModel = host.Services.GetRequiredService<PianoViewModel>();
 engine.RegisterHandler(pianoViewModel);
 
-// Set active theme before any views are created
+// Set active theme and load user colors before any views are created
 UIConfig uiConfig = host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<UIConfig>>().Value;
 ThemePaletteProvider.SetActive(uiConfig.Theme switch
 {
     AppTheme.Light => ThemePaletteProvider.Light,
     _ => ThemePaletteProvider.Dark,
 });
+UserPalette.Initialize(uiConfig.Colors);
 
 try
 {
