@@ -9,24 +9,60 @@ namespace Klavier.UI.Input.Mapping;
 public static class KeyboardMappingProvider
 {
     private const string _MappingsFolder = "mappings";
+    private const string _AppDataFolder = "Klavier";
 
     private static readonly JsonSerializerOptions _JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
     };
+
+    public static event Action? LayoutsChanged;
+
+    public static string UserMappingsDirectory
+    {
+        get
+        {
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                _AppDataFolder,
+                _MappingsFolder);
+            Directory.CreateDirectory(path);
+            return path;
+        }
+    }
+
+    private static string AppMappingsDirectory => Path.Combine(AppContext.BaseDirectory, _MappingsFolder);
 
     public static string[] GetAvailableLayouts()
     {
-        string folder = Path.Combine(AppContext.BaseDirectory, _MappingsFolder);
+        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
 
-        return [.. Directory.GetFiles(folder, "*.json")
-            .Select(Path.GetFileNameWithoutExtension)
-            .Order()!];
+        foreach (string file in Directory.GetFiles(AppMappingsDirectory, "*.json"))
+        {
+            names.Add(Path.GetFileNameWithoutExtension(file));
+        }
+
+        foreach (string file in Directory.GetFiles(UserMappingsDirectory, "*.json"))
+        {
+            names.Add(Path.GetFileNameWithoutExtension(file));
+        }
+
+        return [.. names.Order()];
     }
 
     public static KeyboardMapping Load(string layoutName)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, _MappingsFolder, $"{layoutName.ToLowerInvariant()}.json");
+        string fileName = $"{layoutName.ToLowerInvariant()}.json";
+        string userPath = Path.Combine(UserMappingsDirectory, fileName);
+        string appPath = Path.Combine(AppMappingsDirectory, fileName);
+        string path = File.Exists(userPath) ? userPath : appPath;
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Keyboard mapping '{layoutName}' not found.", path);
+        }
+
         string json = File.ReadAllText(path);
 
         KeyboardMappingDto dto = JsonSerializer.Deserialize<KeyboardMappingDto>(json, _JsonOptions)
@@ -38,6 +74,20 @@ public static class KeyboardMappingProvider
             BlackKeys = BuildKeyMap(dto.BlackKeys),
             BlackKeyModifier = ParseModifier(dto.BlackKeyModifier),
         };
+    }
+
+    public static void Save(string name, KeyboardMappingDto dto)
+    {
+        if (!LayoutNameValidator.TryValidate(name, out string? reason))
+        {
+            throw new ArgumentException(reason, nameof(name));
+        }
+
+        string path = Path.Combine(UserMappingsDirectory, $"{name.ToLowerInvariant()}.json");
+        string json = JsonSerializer.Serialize(dto, _JsonOptions);
+        File.WriteAllText(path, json);
+
+        LayoutsChanged?.Invoke();
     }
 
     private static FrozenDictionary<PhysicalKey, KeyMappingEntry> BuildKeyMap(Dictionary<string, KeyMappingEntryDto> entries)
