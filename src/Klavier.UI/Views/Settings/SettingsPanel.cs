@@ -8,6 +8,7 @@ using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Ports;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.KeybindsEditor;
 using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
@@ -79,6 +80,16 @@ public partial class SettingsPanel : Border
         ComboBox keyboardLayoutCombo = CreateComboBox(
             KeyboardMappingProvider.GetAvailableLayouts(),
             ui.KeyboardLayout);
+        PathIconButton createLayoutButton = CreatePlusIconButton();
+        PathIconButton editLayoutButton = CreatePencilIconButton();
+        StackPanel keyboardLayoutRow = new()
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            Children = { keyboardLayoutCombo, createLayoutButton, editLayoutButton },
+        };
+        WireKeybindsEditorButton(createLayoutButton, uiConfig, useCurrentLayoutName: false);
+        WireKeybindsEditorButton(editLayoutButton, uiConfig, useCurrentLayoutName: true);
 
         SoundFontInfo soundFontInfo = soundFontInfoProvider.GetSoundFontInfo();
         ComboBox presetCombo = CreateComboBox(soundFontInfo.Presets.Values, FindPreset(soundFontInfo.Presets, audio.SoundFont.Preset));
@@ -197,7 +208,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_WhiteKeyLabel, whiteKeyHexTextBox),
                     CreateRow(_BlackKeyLabel, blackKeyHexTextBox),
                     CreateRow(_KeyBorderLabel, keyBorderHexTextBox),
-                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutCombo),
+                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutRow),
                     CreateResetRow(resetButton),
                 },
             },
