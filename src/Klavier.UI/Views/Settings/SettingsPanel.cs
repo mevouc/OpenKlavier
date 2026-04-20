@@ -44,15 +44,18 @@ public partial class SettingsPanel : Border
     private const string _ResetDefaultsButtonLabel = "Reset Defaults";
 
     private readonly IUserSettingsService _settingsService;
+    private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
 
     public SettingsPanel(
         IUserSettingsService settingsService,
         ISoundFontInfoProvider soundFontInfoProvider,
         IOptionsMonitor<PianoConfig> pianoConfig,
         IOptionsMonitor<AudioConfig> audioConfig,
-        IOptionsMonitor<UIConfig> uiConfig)
+        IOptionsMonitor<UIConfig> uiConfig,
+        Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor)
     {
         _settingsService = settingsService;
+        _createKeybindsEditor = createKeybindsEditor;
 
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(12, 8);

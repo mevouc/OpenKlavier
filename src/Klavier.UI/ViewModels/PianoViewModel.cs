@@ -13,9 +13,6 @@ namespace Klavier.UI.ViewModels;
 
 public class PianoViewModel : INoteEventHandler
 {
-    private const ushort _FirstPitch = 36;  // C2
-    private const ushort _LastPitch = 96;   // C7
-
     private readonly FrozenDictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
     private readonly IOptionsMonitor<PianoConfig> _pianoConfig;
@@ -33,22 +30,11 @@ public class PianoViewModel : INoteEventHandler
 
         UIConfig config = _uiConfig.CurrentValue;
         Transpose transpose = new(_pianoConfig.CurrentValue.Transpose);
-        FrozenDictionary<NotePitch, string> keyLabels = LoadKeyLabels(config.KeyboardLayout);
+        IReadOnlyDictionary<NotePitch, string> keyLabels = LoadKeyLabels(config.KeyboardLayout);
 
-        List<PianoKeyViewModel> keys = [];
-
-        for (ushort pitch = _FirstPitch; pitch <= _LastPitch; pitch++)
-        {
-            NotePitch keyPitch = new(pitch);
-            NotePitch soundingPitch = keyPitch.Transpose(transpose);
-
-            string keyLabel = keyLabels.TryGetValue(keyPitch, out string? label) ? label : "";
-            string noteLabel = NoteNames.GetNoteName(soundingPitch, config.NoteNameStyle);
-
-            keys.Add(new PianoKeyViewModel(
-                keyPitch, keyLabel, noteLabel,
-                config.ShowKeyLabels, config.ShowNoteLabels, pianoEngine));
-        }
+        List<PianoKeyViewModel> keys = PianoKeysBuilder.Build(
+            pianoEngine, keyLabels, config.NoteNameStyle, transpose,
+            config.ShowKeyLabels, config.ShowNoteLabels);
 
         Keys = keys;
         _keysByPitch = keys.ToFrozenDictionary(k => k.Pitch);
@@ -82,7 +68,7 @@ public class PianoViewModel : INoteEventHandler
     private void OnUIConfigChanged(UIConfig newConfig)
     {
         Transpose transpose = new(_pianoConfig.CurrentValue.Transpose);
-        FrozenDictionary<NotePitch, string> keyLabels = LoadKeyLabels(newConfig.KeyboardLayout);
+        IReadOnlyDictionary<NotePitch, string> keyLabels = LoadKeyLabels(newConfig.KeyboardLayout);
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -110,22 +96,8 @@ public class PianoViewModel : INoteEventHandler
         });
     }
 
-    private static FrozenDictionary<NotePitch, string> LoadKeyLabels(string layoutName)
+    private static IReadOnlyDictionary<NotePitch, string> LoadKeyLabels(string layoutName)
     {
-        KeyboardMapping mapping = KeyboardMappingProvider.Load(layoutName);
-
-        Dictionary<NotePitch, string> labels = [];
-
-        foreach (KeyMappingEntry entry in mapping.WhiteKeys.Values)
-        {
-            labels[entry.Pitch] = entry.Label;
-        }
-
-        foreach (KeyMappingEntry entry in mapping.BlackKeys.Values)
-        {
-            labels[entry.Pitch] = entry.Label;
-        }
-
-        return labels.ToFrozenDictionary();
+        return KeyboardMappingProvider.Load(layoutName).ToLabelsByPitch();
     }
 }

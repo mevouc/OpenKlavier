@@ -279,7 +279,7 @@ public partial class SettingsPanel
         string currentLayout = uiConfig.CurrentValue.KeyboardLayout;
         KeyboardMapping clone = KeyboardMappingProvider.Load(currentLayout);
         string? existingLayoutName = useCurrentLayoutName ? currentLayout : null;
-        KeybindsEditorWindow editor = new(clone, existingLayoutName);
+        KeybindsEditorWindow editor = _createKeybindsEditor(clone, existingLayoutName);
 
         Window? parent = TopLevel.GetTopLevel(this) as Window;
         if (parent is not null)

@@ -3,9 +3,15 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Klavier.Config;
+using Klavier.Core.Engine;
+using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
+using Klavier.UI.ViewModels;
+using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Toolbar;
+using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views.KeybindsEditor;
 
@@ -31,11 +37,37 @@ public class KeybindsEditorWindow : Window
 
     private readonly KeyboardMapping _cloneSource;
     private readonly string? _existingLayoutName;
+    private readonly PianoView _pianoView;
+    private readonly IPianoEngine _pianoEngine;
+    private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
 
-    public KeybindsEditorWindow(KeyboardMapping cloneSource, string? existingLayoutName)
+    private NotePitch? _currentTarget;
+
+    public KeybindsEditorWindow(
+        KeyboardMapping cloneSource,
+        string? existingLayoutName,
+        IPianoEngine pianoEngine,
+        IOptionsMonitor<UIConfig> uiConfig,
+        IOptionsMonitor<PianoConfig> pianoConfig)
     {
         _cloneSource = cloneSource;
         _existingLayoutName = existingLayoutName;
+        _pianoEngine = pianoEngine;
+
+        List<PianoKeyViewModel> keys = PianoKeysBuilder.Build(
+            pianoEngine,
+            cloneSource.ToLabelsByPitch(),
+            uiConfig.CurrentValue.NoteNameStyle,
+            new Transpose(pianoConfig.CurrentValue.Transpose),
+            showKeyLabels: false,
+            showNoteLabels: true);
+
+        _keysByPitch = keys.ToDictionary(k => k.Pitch);
+        _pianoView = new PianoView(keys)
+        {
+            Height = 120,
+            IsHitTestVisible = false,
+        };
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -45,12 +77,35 @@ public class KeybindsEditorWindow : Window
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
 
         Content = BuildLayout();
+        Closed += (_, _) => SetTarget(null);
+    }
+
+    public void SetTarget(NotePitch? newTarget)
+    {
+        if (_currentTarget is { } prev)
+        {
+            if (_keysByPitch.TryGetValue(prev, out PianoKeyViewModel? prevKey))
+            {
+                prevKey.IsPressed = false;
+            }
+            _pianoEngine.NoteOff(prev);
+        }
+
+        _currentTarget = newTarget;
+
+        if (newTarget is { } next)
+        {
+            if (_keysByPitch.TryGetValue(next, out PianoKeyViewModel? nextKey))
+            {
+                nextKey.IsPressed = true;
+            }
+            _pianoEngine.NoteOn(next);
+        }
     }
 
     private Grid BuildLayout()
     {
         DockPanel header = BuildHeader();
-        Control piano = BuildPlaceholder("Piano view (2.3)", minHeight: 140);
         Control status = BuildStatusStrip();
         Control schema = BuildPlaceholder("PC keyboard schema (2.5)", minHeight: 120);
         StackPanel buttons = BuildButtonsRow();
@@ -61,7 +116,7 @@ public class KeybindsEditorWindow : Window
             RowDefinitions =
             {
                 new RowDefinition { Height = GridLength.Auto },
-                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },
+                new RowDefinition { Height = GridLength.Auto },
                 new RowDefinition { Height = GridLength.Auto },
                 new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },
                 new RowDefinition { Height = GridLength.Auto },
@@ -69,13 +124,13 @@ public class KeybindsEditorWindow : Window
         };
 
         Grid.SetRow(header, 0);
-        Grid.SetRow(piano, 1);
+        Grid.SetRow(_pianoView, 1);
         Grid.SetRow(status, 2);
         Grid.SetRow(schema, 3);
         Grid.SetRow(buttons, 4);
 
         root.Children.Add(header);
-        root.Children.Add(piano);
+        root.Children.Add(_pianoView);
         root.Children.Add(status);
         root.Children.Add(schema);
         root.Children.Add(buttons);
