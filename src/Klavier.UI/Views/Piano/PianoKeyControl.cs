@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Klavier.Core.Primitives;
 using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
 
@@ -11,6 +12,10 @@ namespace Klavier.UI.Views.Piano;
 
 public class PianoKeyControl : Border
 {
+    public PianoKeyInteractionMode InteractionMode { get; set; } = PianoKeyInteractionMode.Play;
+
+    public event EventHandler<NotePitch>? KeyClicked;
+
     private static readonly SolidColorBrush _WhiteKeyBrush = new(UserPalette.WhiteKey);
     private static readonly SolidColorBrush _WhiteKeyPressedBrush = new(UserPalette.WhiteKeyPressed);
     private static readonly SolidColorBrush _BlackKeyBrush = new(UserPalette.BlackKey);
@@ -86,13 +91,20 @@ public class PianoKeyControl : Border
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        _viewModel.Press();
+        if (InteractionMode == PianoKeyInteractionMode.Play)
+        {
+            _viewModel.Press();
+        }
+        KeyClicked?.Invoke(this, _viewModel.Pitch);
         e.Handled = true;
     }
 
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        _viewModel.Release();
+        if (InteractionMode == PianoKeyInteractionMode.Play)
+        {
+            _viewModel.Release();
+        }
         e.Handled = true;
     }
 

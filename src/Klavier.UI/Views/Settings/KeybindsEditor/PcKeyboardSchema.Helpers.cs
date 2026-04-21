@@ -39,15 +39,18 @@ public partial class PcKeyboardSchema
         IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> blackBindings,
         NoteNameStyle noteNameStyle)
     {
-        bool hasWhite = whiteBindings.TryGetValue(key, out KeyMappingEntry whiteEntry);
-        bool hasBlack = blackBindings.TryGetValue(key, out KeyMappingEntry blackEntry);
-
         StackPanel content = new()
         {
             Orientation = Orientation.Vertical,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
+
+        // Blacks are derived from whites + layout modifier, so we only render white entries.
+        // Fall back to the black entry only for the key label (e.g. when a user has a black-only binding
+        // via a legacy file or via a key that is only mapped as modifier+key).
+        bool hasWhite = whiteBindings.TryGetValue(key, out KeyMappingEntry whiteEntry);
+        bool hasBlack = blackBindings.TryGetValue(key, out KeyMappingEntry blackEntry);
 
         string? keyLabel = hasWhite ? whiteEntry.Label : (hasBlack ? blackEntry.Label : null);
         if (keyLabel is not null)
@@ -58,11 +61,6 @@ public partial class PcKeyboardSchema
         if (hasWhite)
         {
             content.Children.Add(BuildNoteLabelText(NoteNames.GetNoteName(whiteEntry.Pitch, noteNameStyle)));
-        }
-
-        if (hasBlack)
-        {
-            content.Children.Add(BuildNoteLabelText("/ " + NoteNames.GetNoteName(blackEntry.Pitch, noteNameStyle)));
         }
 
         return content;

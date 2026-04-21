@@ -65,7 +65,7 @@ public class KeybindsEditorWindow : Window
             cloneSource.ToLabelsByPitch(),
             _noteNameStyle,
             new Transpose(pianoConfig.CurrentValue.Transpose),
-            showKeyLabels: false,
+            showKeyLabels: true,
             showNoteLabels: true);
 
         _keysByPitch = keys.ToDictionary(k => k.Pitch);

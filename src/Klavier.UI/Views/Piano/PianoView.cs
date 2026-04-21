@@ -19,6 +19,9 @@ public class PianoView : Panel
     private readonly List<PianoKeyControl> _blackKeys = [];
     private readonly SustainBarControl? _sustainBar;
 
+    public IReadOnlyList<PianoKeyControl> WhiteKeys => _whiteKeys;
+    public IReadOnlyList<PianoKeyControl> BlackKeys => _blackKeys;
+
     // Maps each white key's index in _whiteKeys to whether it has a black key after it
     private readonly List<bool> _whiteKeyHasSharp = [];
 

@@ -11,6 +11,9 @@ public class KlavierComboBox : ComboBox
     private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
     private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
 
+    // Inherit the Fluent ComboBox control template (Avalonia style matching is exact-type by default).
+    protected override Type StyleKeyOverride => typeof(ComboBox);
+
     public KlavierComboBox()
     {
         VerticalAlignment = VerticalAlignment.Center;

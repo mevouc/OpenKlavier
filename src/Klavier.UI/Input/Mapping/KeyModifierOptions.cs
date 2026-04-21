@@ -4,22 +4,34 @@ namespace Klavier.UI.Input.Mapping;
 
 public static class KeyModifierOptions
 {
-    public static readonly IReadOnlyList<(KeyModifiers Modifier, string Label)> All =
+    public static readonly IReadOnlyList<(KeyModifiers Modifier, string Label, string Symbol)> All =
     [
-        (KeyModifiers.Shift, "Shift"),
-        (KeyModifiers.Control, "Ctrl"),
-        (KeyModifiers.Alt, "Alt"),
+        (KeyModifiers.Shift, "Shift", "⇧"),
+        (KeyModifiers.Control, "Ctrl", "⌃"),
+        (KeyModifiers.Alt, "Alt", "⌥"),
     ];
 
     public static IReadOnlyList<string> AllLabels { get; } = [.. All.Select(o => o.Label)];
 
     public static string LabelOf(KeyModifiers modifier)
     {
-        foreach ((KeyModifiers m, string label) in All)
+        foreach ((KeyModifiers m, string label, string _) in All)
         {
             if (m == modifier)
             {
                 return label;
+            }
+        }
+        throw new ArgumentOutOfRangeException(nameof(modifier), modifier, "Unsupported key modifier.");
+    }
+
+    public static string SymbolOf(KeyModifiers modifier)
+    {
+        foreach ((KeyModifiers m, string _, string symbol) in All)
+        {
+            if (m == modifier)
+            {
+                return symbol;
             }
         }
         throw new ArgumentOutOfRangeException(nameof(modifier), modifier, "Unsupported key modifier.");
@@ -32,7 +44,7 @@ public static class KeyModifierOptions
             return null;
         }
 
-        foreach ((KeyModifiers modifier, string l) in All)
+        foreach ((KeyModifiers modifier, string l, string _) in All)
         {
             if (l == label)
             {
