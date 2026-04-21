@@ -8,6 +8,7 @@ using Klavier.Core.Engine;
 using Klavier.Core.Music;
 using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
+using Klavier.UI.Ports;
 using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views.Controls;
@@ -41,10 +42,12 @@ public class KeybindsEditorWindow : Window
     private readonly KeybindsEditSession _session;
     private readonly PianoView _pianoView;
     private readonly IPianoEngine _pianoEngine;
+    private readonly IUserSettingsService _settingsService;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly TextBlock _statusText;
     private readonly KlavierComboBox _modifierCombo;
     private readonly Viewbox _schemaViewbox;
+    private readonly KlavierButton _saveButton;
     private readonly NoteNameStyle _noteNameStyle;
 
     private NotePitch? _pendingTarget;
@@ -54,10 +57,12 @@ public class KeybindsEditorWindow : Window
         string? existingLayoutName,
         IPianoEngine pianoEngine,
         IOptionsMonitor<UIConfig> uiConfig,
-        IOptionsMonitor<PianoConfig> pianoConfig)
+        IOptionsMonitor<PianoConfig> pianoConfig,
+        IUserSettingsService settingsService)
     {
         _existingLayoutName = existingLayoutName;
         _pianoEngine = pianoEngine;
+        _settingsService = settingsService;
         _noteNameStyle = uiConfig.CurrentValue.NoteNameStyle;
         _session = new KeybindsEditSession(cloneSource);
 
@@ -76,6 +81,7 @@ public class KeybindsEditorWindow : Window
         _statusText = BuildStatusStrip();
         _modifierCombo = BuildModifierCombo();
         _modifierCombo.SelectionChanged += OnModifierSelectionChanged;
+        _saveButton = BuildSaveButton();
 
         _schemaViewbox = new Viewbox
         {
@@ -179,6 +185,7 @@ public class KeybindsEditorWindow : Window
     {
         _schemaViewbox.Child = BuildSchema();
         SyncPianoLabelsFromSession();
+        _saveButton.IsEnabled = _session.IsDirty;
     }
 
     private void SyncPianoLabelsFromSession()
@@ -287,15 +294,54 @@ public class KeybindsEditorWindow : Window
             e.Handled = true;
         };
 
-        KlavierButton saveButton = new(_SaveButtonLabel);
-        // TODO (2.8): wire Save.
-
         return new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = _ButtonsRowSpacing,
-            Children = { cancelButton, saveButton },
+            Children = { cancelButton, _saveButton },
         };
+    }
+
+    private KlavierButton BuildSaveButton()
+    {
+        KlavierButton button = new(_SaveButtonLabel) { IsEnabled = false };
+        button.PointerPressed += async (_, e) =>
+        {
+            e.Handled = true;
+            try
+            {
+                await SaveAsync();
+            }
+            finally
+            {
+                // A modal dialog opened from PointerPressed can swallow the matching PointerReleased,
+                // leaving the button stuck in its active state. Reset explicitly.
+                button.IsActive = false;
+            }
+        };
+        return button;
+    }
+
+    private async Task SaveAsync()
+    {
+        // Edit mode saves in place; create mode prompts for a name.
+        string? name = _existingLayoutName;
+        if (name is null)
+        {
+            NameLayoutDialog dialog = new(prefilledName: null);
+            await dialog.ShowDialog(this);
+            name = dialog.ConfirmedName;
+            if (name is null)
+            {
+                return;
+            }
+        }
+
+        KeyboardMappingProvider.Save(name, _session.ToDto());
+        _settingsService.UpdateSetting(
+            ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)),
+            name);
+        Close();
     }
 }

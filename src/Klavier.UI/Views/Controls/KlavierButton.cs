@@ -34,4 +34,13 @@ public class KlavierButton : ActivableControl
     {
         _label.Foreground = isActive ? ActiveTextBrush : DefaultTextBrush;
     }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsEnabledProperty)
+        {
+            Opacity = IsEnabled ? 1.0 : 0.5;
+        }
+    }
 }

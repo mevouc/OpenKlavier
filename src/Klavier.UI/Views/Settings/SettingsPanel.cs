@@ -173,6 +173,13 @@ public partial class SettingsPanel : Border
             keyboardLayoutCombo.SelectedItem = newUi.KeyboardLayout;
         }));
 
+        KeyboardMappingProvider.LayoutsChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            string? currentSelection = keyboardLayoutCombo.SelectedItem as string;
+            keyboardLayoutCombo.ItemsSource = KeyboardMappingProvider.GetAvailableLayouts();
+            keyboardLayoutCombo.SelectedItem = currentSelection;
+        });
+
         // Wire reset
         KlavierButton resetButton = new(_ResetDefaultsButtonLabel);
         resetButton.PointerPressed += (_, e) =>

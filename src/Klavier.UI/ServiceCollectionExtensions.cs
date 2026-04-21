@@ -2,6 +2,7 @@ using Klavier.Core.Engine;
 using Klavier.UI.Input;
 using Klavier.UI.Input.Mapping;
 using Klavier.Config;
+using Klavier.UI.Ports;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
 using Klavier.UI.Views.Piano;
@@ -36,7 +37,8 @@ public static class ServiceCollectionExtensions
                 existingLayoutName,
                 sp.GetRequiredService<IPianoEngine>(),
                 sp.GetRequiredService<IOptionsMonitor<UIConfig>>(),
-                sp.GetRequiredService<IOptionsMonitor<PianoConfig>>()));
+                sp.GetRequiredService<IOptionsMonitor<PianoConfig>>(),
+                sp.GetRequiredService<IUserSettingsService>()));
 
         return services;
     }

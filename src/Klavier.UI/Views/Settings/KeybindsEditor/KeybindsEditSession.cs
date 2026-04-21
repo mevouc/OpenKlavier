@@ -1,6 +1,7 @@
 using Avalonia.Input;
 using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
+using Klavier.UI.Input.Mapping.Dto;
 
 namespace Klavier.UI.Views.Settings.KeybindsEditor;
 
@@ -20,6 +21,17 @@ public class KeybindsEditSession(KeyboardMapping source)
     public bool IsDirty { get; private set; }
 
     public event Action? BindingsChanged;
+
+    public KeyboardMappingDto ToDto() => new()
+    {
+        BlackKeyModifier = KeyModifierOptions.LabelOf(BlackKeyModifier),
+        WhiteKeys = _whiteBindings.ToDictionary(
+            e => e.Key.ToString(),
+            e => new KeyMappingEntryDto { Pitch = e.Value.Pitch.Value, Label = e.Value.Label }),
+        BlackKeys = _blackBindings.ToDictionary(
+            e => e.Key.ToString(),
+            e => new KeyMappingEntryDto { Pitch = e.Value.Pitch.Value, Label = e.Value.Label }),
+    };
 
     /// <summary>
     /// Change the layout's black-key modifier. All existing black labels are re-derived with the new
