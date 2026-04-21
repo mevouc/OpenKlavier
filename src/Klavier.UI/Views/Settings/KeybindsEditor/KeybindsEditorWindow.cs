@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Config;
@@ -23,9 +24,9 @@ public class KeybindsEditorWindow : Window
     private const int _MinWidth = 720;
     private const int _MinHeight = 450;
     private const string _ModifierLabel = "Modifier for black keys:";
-    private const string _BackButtonLabel = "Back";
-    private const string _SkipButtonLabel = "Skip";
+    private const string _CancelButtonLabel = "Cancel";
     private const string _SaveButtonLabel = "Save";
+    private const string _IdleStatusText = "Click a piano key to remap.";
     private const double _StatusFontSize = 20;
     private const double _PianoFixedHeight = 120;
     private const double _RootMargin = 16;
@@ -36,17 +37,17 @@ public class KeybindsEditorWindow : Window
 
     private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
 
-    private readonly KeyboardMapping _cloneSource;
     private readonly string? _existingLayoutName;
+    private readonly KeybindsEditSession _session;
     private readonly PianoView _pianoView;
     private readonly IPianoEngine _pianoEngine;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly TextBlock _statusText;
     private readonly KlavierComboBox _modifierCombo;
+    private readonly Viewbox _schemaViewbox;
     private readonly NoteNameStyle _noteNameStyle;
 
-    private int _targetIndex;
-    private bool _hasActiveTarget;
+    private NotePitch? _pendingTarget;
 
     public KeybindsEditorWindow(
         KeyboardMapping cloneSource,
@@ -55,10 +56,10 @@ public class KeybindsEditorWindow : Window
         IOptionsMonitor<UIConfig> uiConfig,
         IOptionsMonitor<PianoConfig> pianoConfig)
     {
-        _cloneSource = cloneSource;
         _existingLayoutName = existingLayoutName;
         _pianoEngine = pianoEngine;
         _noteNameStyle = uiConfig.CurrentValue.NoteNameStyle;
+        _session = new KeybindsEditSession(cloneSource);
 
         List<PianoKeyViewModel> keys = PianoKeysBuilder.Build(
             pianoEngine,
@@ -69,14 +70,19 @@ public class KeybindsEditorWindow : Window
             showNoteLabels: true);
 
         _keysByPitch = keys.ToDictionary(k => k.Pitch);
-        _pianoView = new PianoView(keys)
-        {
-            Height = _PianoFixedHeight,
-            IsHitTestVisible = false,
-        };
+        _pianoView = new PianoView(keys) { Height = _PianoFixedHeight };
+        WirePianoInteractivity();
+
         _statusText = BuildStatusStrip();
         _modifierCombo = BuildModifierCombo();
         // TODO (2.7): wire _modifierCombo.SelectionChanged to confirm dialog + schema refresh.
+
+        _schemaViewbox = new Viewbox
+        {
+            Stretch = Stretch.Uniform,
+            Child = BuildSchema(),
+        };
+        _session.BindingsChanged += OnBindingsChanged;
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -86,65 +92,116 @@ public class KeybindsEditorWindow : Window
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
 
         Content = BuildLayout();
-        Closed += (_, _) => Release();
-
-        NavigateTo(0);
+        _statusText.Text = _IdleStatusText;
+        Closed += (_, _) => ClearPendingTarget();
     }
 
-    private void NavigateTo(int newIndex)
+    private void WirePianoInteractivity()
     {
-        const int maxIndex = PianoKeysBuilder.LastPitch - PianoKeysBuilder.FirstPitch;
-        if (newIndex < 0 || newIndex > maxIndex)
+        foreach (PianoKeyControl whiteKey in _pianoView.WhiteKeys)
         {
+            whiteKey.InteractionMode = PianoKeyInteractionMode.Select;
+            whiteKey.KeyClicked += (_, pitch) => SelectTarget(pitch);
+        }
+        foreach (PianoKeyControl blackKey in _pianoView.BlackKeys)
+        {
+            blackKey.IsHitTestVisible = false;
+        }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (_pendingTarget is not { } targetPitch)
+        {
+            base.OnKeyDown(e);
             return;
         }
 
-        Release();
-        _targetIndex = newIndex;
-        Press();
+        if (e.Key == Key.Escape)
+        {
+            ClearPendingTarget();
+            e.Handled = true;
+            return;
+        }
+
+        if (!BindableKeys.All.Contains(e.PhysicalKey))
+        {
+            _statusText.Text = $"'{e.PhysicalKey}' is not a bindable key. Press a letter/digit/punctuation, Esc to cancel.";
+            e.Handled = true;
+            return;
+        }
+
+        BindingResult result = _session.Apply(targetPitch, e.PhysicalKey, e.KeySymbol);
+        ClearPendingTarget();
+
+        if (result.DisplacedFromPitch is { } displaced)
+        {
+            _statusText.Text = $"Moved binding away from {NoteNames.GetNoteName(displaced, _noteNameStyle)}.";
+        }
+
+        e.Handled = true;
     }
 
-    private NotePitch CurrentPitch => new((ushort)(PianoKeysBuilder.FirstPitch + _targetIndex));
-
-    private void Press()
+    private void SelectTarget(NotePitch pitch)
     {
-        NotePitch pitch = CurrentPitch;
-        if (_keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? key))
+        ClearPendingTarget();
+        _pendingTarget = pitch;
+        if (_keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? vm))
         {
-            key.IsPressed = true;
+            vm.IsPressed = true;
         }
         _pianoEngine.NoteOn(pitch);
-        _statusText.Text = $"Bind {NoteNames.GetNoteName(pitch, _noteNameStyle)}";
-        _hasActiveTarget = true;
+        _statusText.Text = $"Press a keyboard key to bind {NoteNames.GetNoteName(pitch, _noteNameStyle)}. Esc to cancel.";
     }
 
-    private void Release()
+    private void ClearPendingTarget()
     {
-        if (!_hasActiveTarget)
+        if (_pendingTarget is not { } pitch)
         {
             return;
         }
-        NotePitch pitch = CurrentPitch;
-        if (_keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? key))
+        if (_keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? vm))
         {
-            key.IsPressed = false;
+            vm.IsPressed = false;
         }
         _pianoEngine.NoteOff(pitch);
-        _hasActiveTarget = false;
+        _pendingTarget = null;
+        _statusText.Text = _IdleStatusText;
+    }
+
+    private PcKeyboardSchema BuildSchema() => new(
+        _session.WhiteBindings,
+        _session.BlackBindings,
+        _session.BlackKeyModifier,
+        _noteNameStyle);
+
+    private void OnBindingsChanged()
+    {
+        _schemaViewbox.Child = BuildSchema();
+        SyncPianoLabelsFromSession();
+    }
+
+    private void SyncPianoLabelsFromSession()
+    {
+        Dictionary<NotePitch, string> labels = [];
+        foreach (KeyMappingEntry entry in _session.WhiteBindings.Values)
+        {
+            labels[entry.Pitch] = entry.Label;
+        }
+        foreach (KeyMappingEntry entry in _session.BlackBindings.Values)
+        {
+            labels[entry.Pitch] = entry.Label;
+        }
+
+        foreach (PianoKeyViewModel vm in _keysByPitch.Values)
+        {
+            vm.KeyLabel = labels.TryGetValue(vm.Pitch, out string? label) ? label : string.Empty;
+        }
     }
 
     private Grid BuildLayout()
     {
         DockPanel header = BuildHeader();
-        Viewbox schema = new()
-        {
-            Stretch = Stretch.Uniform,
-            Child = new PcKeyboardSchema(
-                _cloneSource.WhiteKeys,
-                _cloneSource.BlackKeys,
-                _cloneSource.BlackKeyModifier,
-                _noteNameStyle),
-        };
         StackPanel buttons = BuildButtonsRow();
 
         Grid root = new()
@@ -163,13 +220,13 @@ public class KeybindsEditorWindow : Window
         Grid.SetRow(header, 0);
         Grid.SetRow(_pianoView, 1);
         Grid.SetRow(_statusText, 2);
-        Grid.SetRow(schema, 3);
+        Grid.SetRow(_schemaViewbox, 3);
         Grid.SetRow(buttons, 4);
 
         root.Children.Add(header);
         root.Children.Add(_pianoView);
         root.Children.Add(_statusText);
-        root.Children.Add(schema);
+        root.Children.Add(_schemaViewbox);
         root.Children.Add(buttons);
 
         return root;
@@ -197,7 +254,7 @@ public class KeybindsEditorWindow : Window
     private KlavierComboBox BuildModifierCombo() => new()
     {
         ItemsSource = KeyModifierOptions.AllLabels,
-        SelectedItem = KeyModifierOptions.LabelOf(_cloneSource.BlackKeyModifier),
+        SelectedItem = KeyModifierOptions.LabelOf(_session.BlackKeyModifier),
     };
 
     private static TextBlock BuildStatusStrip()
@@ -214,28 +271,22 @@ public class KeybindsEditorWindow : Window
 
     private StackPanel BuildButtonsRow()
     {
-        KlavierButton backButton = new(_BackButtonLabel);
-        backButton.PointerPressed += (_, e) =>
+        KlavierButton cancelButton = new(_CancelButtonLabel);
+        cancelButton.PointerPressed += (_, e) =>
         {
-            NavigateTo(_targetIndex - 1);
-            e.Handled = true;
-        };
-
-        KlavierButton skipButton = new(_SkipButtonLabel);
-        skipButton.PointerPressed += (_, e) =>
-        {
-            NavigateTo(_targetIndex + 1);
+            Close();
             e.Handled = true;
         };
 
         KlavierButton saveButton = new(_SaveButtonLabel);
+        // TODO (2.8): wire Save.
 
         return new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = _ButtonsRowSpacing,
-            Children = { backButton, skipButton, saveButton },
+            Children = { cancelButton, saveButton },
         };
     }
 }

@@ -9,24 +9,17 @@ namespace Klavier.UI.Views.Settings.KeybindsEditor;
 /// with all the derived-state rules (black = white + modifier, label normalization, reuse handling).
 /// View-agnostic.
 /// </summary>
-public class KeybindsEditSession
+public class KeybindsEditSession(KeyboardMapping source)
 {
-    private readonly Dictionary<PhysicalKey, KeyMappingEntry> _whiteBindings;
-    private readonly Dictionary<PhysicalKey, KeyMappingEntry> _blackBindings;
+    private readonly Dictionary<PhysicalKey, KeyMappingEntry> _whiteBindings = new(source.WhiteKeys);
+    private readonly Dictionary<PhysicalKey, KeyMappingEntry> _blackBindings = new(source.BlackKeys);
 
     public IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> WhiteBindings => _whiteBindings;
     public IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> BlackBindings => _blackBindings;
-    public KeyModifiers BlackKeyModifier { get; private set; }
+    public KeyModifiers BlackKeyModifier { get; } = source.BlackKeyModifier;
     public bool IsDirty { get; private set; }
 
     public event Action? BindingsChanged;
-
-    public KeybindsEditSession(KeyboardMapping source)
-    {
-        _whiteBindings = new Dictionary<PhysicalKey, KeyMappingEntry>(source.WhiteKeys);
-        _blackBindings = new Dictionary<PhysicalKey, KeyMappingEntry>(source.BlackKeys);
-        BlackKeyModifier = source.BlackKeyModifier;
-    }
 
     /// <summary>
     /// Apply a binding of <paramref name="physicalKey"/> (with its captured <paramref name="keySymbol"/>)

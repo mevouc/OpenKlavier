@@ -13,15 +13,19 @@ namespace Klavier.UI.Views.Settings.KeybindsEditor;
 
 public partial class PcKeyboardSchema
 {
-    private static readonly SolidColorBrush _KeyBorderBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _BoundKeyBorderBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _UnboundKeyBorderBrush = new(ThemePaletteProvider.NeutralSurface);
     private static readonly SolidColorBrush _ActiveBorderBrush = new(UserPalette.Accent);
     private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _HomeRowMarkerBrush = new(ThemePaletteProvider.NeutralSurface);
 
     private const double _KeyWidth = 46;
     private const double _KeyHeight = _KeyWidth;
-    private const double _ModifierKeyWidth = 52;
+    private const double _ModifierKeyWidth = 58;
     private const double _KeyLabelFontSize = 10;
     private const double _NoteLabelFontSize = 8;
+    private const double _HomeRowMarkerFontSize = 18;
+    private const double _HomeRowMarkerBottomMargin = 4;
 
     private static Control BuildKeyBlock(
         PhysicalKey key,
@@ -29,11 +33,45 @@ public partial class PcKeyboardSchema
         IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> blackBindings,
         NoteNameStyle noteNameStyle)
     {
-        StackPanel content = BuildKeyContent(key, whiteBindings, blackBindings, noteNameStyle);
-        return IsLayoutDependent(key) ? BuildDashedKeyFrame(content) : BuildSolidKeyFrame(content);
+        bool isBound = whiteBindings.ContainsKey(key) || blackBindings.ContainsKey(key);
+        IBrush border = isBound ? _BoundKeyBorderBrush : _UnboundKeyBorderBrush;
+        Control content = BuildKeyContent(key, whiteBindings, blackBindings, noteNameStyle);
+        return IsLayoutDependent(key) ? BuildDashedKeyFrame(content, border) : BuildSolidKeyFrame(content, border);
     }
 
-    private static StackPanel BuildKeyContent(
+    private static Control BuildKeyContent(
+        PhysicalKey key,
+        IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> whiteBindings,
+        IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> blackBindings,
+        NoteNameStyle noteNameStyle)
+    {
+        StackPanel labels = BuildKeyLabels(key, whiteBindings, blackBindings, noteNameStyle);
+        if (!HasHomeRowMarker(key))
+        {
+            return labels;
+        }
+
+        Grid layout = new();
+        layout.Children.Add(labels);
+        layout.Children.Add(BuildHomeRowMarker());
+        return layout;
+    }
+
+    private static bool HasHomeRowMarker(PhysicalKey key) =>
+        key is PhysicalKey.F or PhysicalKey.J;
+
+    private static TextBlock BuildHomeRowMarker() => new()
+    {
+        Text = "_",
+        FontSize = _HomeRowMarkerFontSize,
+        FontWeight = FontWeight.Bold,
+        Foreground = _HomeRowMarkerBrush,
+        HorizontalAlignment = HorizontalAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Bottom,
+        Margin = new Thickness(0, 0, 0, _HomeRowMarkerBottomMargin),
+    };
+
+    private static StackPanel BuildKeyLabels(
         PhysicalKey key,
         IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> whiteBindings,
         IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> blackBindings,
@@ -66,9 +104,9 @@ public partial class PcKeyboardSchema
         return content;
     }
 
-    private static Border BuildSolidKeyFrame(Control content) => new()
+    private static Border BuildSolidKeyFrame(Control content, IBrush border) => new()
     {
-        BorderBrush = _KeyBorderBrush,
+        BorderBrush = border,
         BorderThickness = new Thickness(Constants.BorderThickness),
         CornerRadius = new CornerRadius(Constants.CornerRadius),
         Width = _KeyWidth,
@@ -76,7 +114,7 @@ public partial class PcKeyboardSchema
         Child = content,
     };
 
-    private static Panel BuildDashedKeyFrame(Control content) => new()
+    private static Panel BuildDashedKeyFrame(Control content, IBrush border) => new()
     {
         Width = _KeyWidth,
         Height = _KeyHeight,
@@ -84,7 +122,7 @@ public partial class PcKeyboardSchema
         {
             new Rectangle
             {
-                Stroke = _KeyBorderBrush,
+                Stroke = border,
                 StrokeThickness = Constants.BorderThickness,
                 StrokeDashArray = [2, 2],
                 RadiusX = Constants.CornerRadius,
@@ -116,7 +154,7 @@ public partial class PcKeyboardSchema
 
     private static Border BuildModifierBlock(string label, bool isActive) => new()
     {
-        BorderBrush = isActive ? _ActiveBorderBrush : _KeyBorderBrush,
+        BorderBrush = isActive ? _ActiveBorderBrush : _BoundKeyBorderBrush,
         BorderThickness = new Thickness(Constants.BorderThickness),
         CornerRadius = new CornerRadius(Constants.CornerRadius),
         Width = _ModifierKeyWidth,

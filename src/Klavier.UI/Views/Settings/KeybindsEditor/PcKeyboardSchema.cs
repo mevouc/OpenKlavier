@@ -14,13 +14,12 @@ public partial class PcKeyboardSchema : StackPanel
     private const double _KeyUnit = _KeyWidth + _KeySpacing;
 
     // Typewriter-style x-axis shift per row (indexed into BindableKeys.Rows).
-    // Row 4's first key (Z) aligns with row 1's "2".
     private static readonly double[] _RowOffsets =
     [
         0,
         _KeyUnit * 1.33,
         _KeyUnit * 1.67,
-        _KeyUnit * 2.0,
+        0, // bottom letter row: prefixed with Shift, so starts at the left edge like on a real keyboard.
     ];
 
     public PcKeyboardSchema(
@@ -33,11 +32,15 @@ public partial class PcKeyboardSchema : StackPanel
         Spacing = _RowSpacing;
         HorizontalAlignment = HorizontalAlignment.Center;
 
+        int lastIndex = BindableKeys.Rows.Count - 1;
         for (int i = 0; i < BindableKeys.Rows.Count; i++)
         {
-            Children.Add(BuildKeyRow(BindableKeys.Rows[i], _RowOffsets[i], whiteBindings, blackBindings, noteNameStyle));
+            Control? prefix = i == lastIndex
+                ? BuildModifierBlock("Shift", activeModifier == KeyModifiers.Shift)
+                : null;
+            Children.Add(BuildKeyRow(BindableKeys.Rows[i], _RowOffsets[i], whiteBindings, blackBindings, noteNameStyle, prefix));
         }
-        Children.Add(BuildModifierRow(activeModifier));
+        Children.Add(BuildControlAltRow(activeModifier));
     }
 
     private static StackPanel BuildKeyRow(
@@ -45,7 +48,8 @@ public partial class PcKeyboardSchema : StackPanel
         double leftOffset,
         IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> whiteBindings,
         IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> blackBindings,
-        NoteNameStyle noteNameStyle)
+        NoteNameStyle noteNameStyle,
+        Control? prefix = null)
     {
         StackPanel row = new()
         {
@@ -55,6 +59,11 @@ public partial class PcKeyboardSchema : StackPanel
             Margin = new Thickness(leftOffset, 0, 0, 0),
         };
 
+        if (prefix is not null)
+        {
+            row.Children.Add(prefix);
+        }
+
         foreach (PhysicalKey key in keys)
         {
             row.Children.Add(BuildKeyBlock(key, whiteBindings, blackBindings, noteNameStyle));
@@ -63,19 +72,18 @@ public partial class PcKeyboardSchema : StackPanel
         return row;
     }
 
-    private static StackPanel BuildModifierRow(KeyModifiers activeModifier)
+    private static StackPanel BuildControlAltRow(KeyModifiers activeModifier)
     {
         StackPanel row = new()
         {
             Orientation = Orientation.Horizontal,
             Spacing = _KeySpacing,
-            HorizontalAlignment = HorizontalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(_RowOffsets[^1], 0, 0, 0),
         };
 
-        foreach ((KeyModifiers modifier, string label, string _) in KeyModifierOptions.All)
-        {
-            row.Children.Add(BuildModifierBlock(label, modifier == activeModifier));
-        }
+        row.Children.Add(BuildModifierBlock("Ctrl", activeModifier == KeyModifiers.Control));
+        row.Children.Add(BuildModifierBlock("Alt", activeModifier == KeyModifiers.Alt));
 
         return row;
     }

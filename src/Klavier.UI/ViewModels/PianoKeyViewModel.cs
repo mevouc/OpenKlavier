@@ -17,27 +17,21 @@ public partial class PianoKeyViewModel(
     public bool IsBlack => Pitch.IsAccidental;
 
     [ObservableProperty]
-    private string _keyLabel = keyLabel;
+    public partial string KeyLabel { get; set; } = keyLabel;
 
     [ObservableProperty]
-    private bool _isPressed;
+    public partial bool IsPressed { get; set; }
 
     [ObservableProperty]
-    private string _noteLabel = noteLabel;
+    public partial string NoteLabel { get; set; } = noteLabel;
 
     [ObservableProperty]
-    private bool _showKeyLabel = showKeyLabel;
+    public partial bool ShowKeyLabel { get; set; } = showKeyLabel;
 
     [ObservableProperty]
-    private bool _showNoteLabel = showNoteLabel;
+    public partial bool ShowNoteLabel { get; set; } = showNoteLabel;
 
-    public void Press()
-    {
-        pianoEngine.NoteOn(Pitch);
-    }
+    public void Press() => pianoEngine.NoteOn(Pitch);
 
-    public void Release()
-    {
-        pianoEngine.NoteOff(Pitch);
-    }
+    public void Release() => pianoEngine.NoteOff(Pitch);
 }
