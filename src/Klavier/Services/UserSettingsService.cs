@@ -54,6 +54,31 @@ public class UserSettingsService(string appName) : IUserSettingsService
         File.WriteAllText(_filePath, root.ToJsonString(_WriteOptions));
     }
 
+    public void ClearSetting(string keyPath)
+    {
+        string json = File.ReadAllText(_filePath);
+        JsonObject? root = JsonNode.Parse(json)?.AsObject();
+        if (root is null)
+        {
+            return;
+        }
+
+        string[] segments = keyPath.Split(':');
+        JsonObject current = root;
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            JsonObject? child = current[segments[i]]?.AsObject();
+            if (child is null)
+            {
+                return; // path doesn't exist, nothing to clear
+            }
+            current = child;
+        }
+        current.Remove(segments[^1]);
+
+        File.WriteAllText(_filePath, root.ToJsonString(_WriteOptions));
+    }
+
     public void ResetAll()
     {
         File.WriteAllText(_filePath, _EmptyContent);

@@ -4,6 +4,7 @@ using Klavier.Core.Engine;
 using Klavier.Config;
 using Klavier.Core.Ports;
 using Klavier.Extensions;
+using Klavier.Services;
 using Klavier.UI;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
@@ -28,6 +29,12 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddKlavierUI(configuration.GetSection(UIConfig.SectionName));
     })
     .Build();
+
+// Heal any user-settings values that point at missing files or otherwise-invalid state.
+// Must run before any consumer (e.g. PianoViewModel) reads KeyboardLayout / SoundFont.Path.
+StartupConfigValidator.ValidateAndHeal(
+    host.Services,
+    host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Klavier.StartupConfigValidator"));
 
 // Initialize audio and register it as a note event handler
 IAudioOutput audio = host.Services.GetRequiredService<IAudioOutput>();
