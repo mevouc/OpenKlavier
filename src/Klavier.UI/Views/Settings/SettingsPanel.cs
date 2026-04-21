@@ -8,8 +8,8 @@ using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Ports;
 using Klavier.UI.Theme;
-using Klavier.UI.Views.KeybindsEditor;
 using Klavier.UI.Views.Settings;
+using Klavier.UI.Views.Settings.KeybindsEditor;
 using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 

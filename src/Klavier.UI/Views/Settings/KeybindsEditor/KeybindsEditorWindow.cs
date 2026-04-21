@@ -5,6 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Config;
 using Klavier.Core.Engine;
+using Klavier.Core.Music;
 using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
@@ -13,7 +14,7 @@ using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 
-namespace Klavier.UI.Views.KeybindsEditor;
+namespace Klavier.UI.Views.Settings.KeybindsEditor;
 
 public class KeybindsEditorWindow : Window
 {
@@ -40,8 +41,11 @@ public class KeybindsEditorWindow : Window
     private readonly PianoView _pianoView;
     private readonly IPianoEngine _pianoEngine;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
+    private readonly TextBlock _statusText;
+    private readonly NoteNameStyle _noteNameStyle;
 
     private NotePitch? _currentTarget;
+    private int _targetIndex;
 
     public KeybindsEditorWindow(
         KeyboardMapping cloneSource,
@@ -53,11 +57,12 @@ public class KeybindsEditorWindow : Window
         _cloneSource = cloneSource;
         _existingLayoutName = existingLayoutName;
         _pianoEngine = pianoEngine;
+        _noteNameStyle = uiConfig.CurrentValue.NoteNameStyle;
 
         List<PianoKeyViewModel> keys = PianoKeysBuilder.Build(
             pianoEngine,
             cloneSource.ToLabelsByPitch(),
-            uiConfig.CurrentValue.NoteNameStyle,
+            _noteNameStyle,
             new Transpose(pianoConfig.CurrentValue.Transpose),
             showKeyLabels: false,
             showNoteLabels: true);
@@ -68,6 +73,7 @@ public class KeybindsEditorWindow : Window
             Height = 120,
             IsHitTestVisible = false,
         };
+        _statusText = BuildStatusStrip();
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -78,6 +84,22 @@ public class KeybindsEditorWindow : Window
 
         Content = BuildLayout();
         Closed += (_, _) => SetTarget(null);
+
+        NavigateTo(0);
+    }
+
+    private void NavigateTo(int newIndex)
+    {
+        int maxIndex = PianoKeysBuilder.LastPitch - PianoKeysBuilder.FirstPitch;
+        if (newIndex < 0 || newIndex > maxIndex)
+        {
+            return;
+        }
+
+        _targetIndex = newIndex;
+        NotePitch target = new((ushort)(PianoKeysBuilder.FirstPitch + _targetIndex));
+        SetTarget(target);
+        _statusText.Text = $"Bind {NoteNames.GetNoteName(target, _noteNameStyle)}";
     }
 
     public void SetTarget(NotePitch? newTarget)
@@ -106,7 +128,6 @@ public class KeybindsEditorWindow : Window
     private Grid BuildLayout()
     {
         DockPanel header = BuildHeader();
-        Control status = BuildStatusStrip();
         Control schema = BuildPlaceholder("PC keyboard schema (2.5)", minHeight: 120);
         StackPanel buttons = BuildButtonsRow();
 
@@ -125,13 +146,13 @@ public class KeybindsEditorWindow : Window
 
         Grid.SetRow(header, 0);
         Grid.SetRow(_pianoView, 1);
-        Grid.SetRow(status, 2);
+        Grid.SetRow(_statusText, 2);
         Grid.SetRow(schema, 3);
         Grid.SetRow(buttons, 4);
 
         root.Children.Add(header);
         root.Children.Add(_pianoView);
-        root.Children.Add(status);
+        root.Children.Add(_statusText);
         root.Children.Add(schema);
         root.Children.Add(buttons);
 
@@ -192,7 +213,7 @@ public class KeybindsEditorWindow : Window
     {
         return new TextBlock
         {
-            Text = "Bind <NoteName>",
+            Text = string.Empty,
             HorizontalAlignment = HorizontalAlignment.Center,
             FontSize = _StatusFontSize,
             Margin = new Thickness(0, 0, 0, 8),
@@ -200,10 +221,22 @@ public class KeybindsEditorWindow : Window
         };
     }
 
-    private static StackPanel BuildButtonsRow()
+    private StackPanel BuildButtonsRow()
     {
         ToolbarButton backButton = new(_BackButtonLabel);
+        backButton.PointerPressed += (_, e) =>
+        {
+            NavigateTo(_targetIndex - 1);
+            e.Handled = true;
+        };
+
         ToolbarButton skipButton = new(_SkipButtonLabel);
+        skipButton.PointerPressed += (_, e) =>
+        {
+            NavigateTo(_targetIndex + 1);
+            e.Handled = true;
+        };
+
         ToolbarButton saveButton = new(_SaveButtonLabel);
 
         return new StackPanel

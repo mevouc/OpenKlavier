@@ -4,12 +4,12 @@ using Klavier.UI.Input.Mapping;
 using Klavier.Config;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
-using Klavier.UI.Views.KeybindsEditor;
 using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Klavier.UI.Views.Settings.KeybindsEditor;
 
 namespace Klavier.UI;
 
