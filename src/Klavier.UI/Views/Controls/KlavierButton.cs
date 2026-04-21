@@ -3,13 +3,13 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Klavier.UI.Theme;
 
-namespace Klavier.UI.Views.Toolbar;
+namespace Klavier.UI.Views.Controls;
 
-public class ToolbarButton : ActivableControl
+public class KlavierButton : ActivableControl
 {
     private readonly TextBlock _label;
 
-    public ToolbarButton(string text)
+    public KlavierButton(string text, bool momentaryActiveOnPress = true)
     {
         _label = new TextBlock
         {
@@ -22,6 +22,12 @@ public class ToolbarButton : ActivableControl
 
         Padding = new Thickness(12, 4);
         Child = _label;
+
+        if (momentaryActiveOnPress) // default button feedback
+        {
+            PointerPressed += (_, _) => IsActive = true;
+            PointerReleased += (_, _) => IsActive = false;
+        }
     }
 
     protected override void OnActiveStateChanged(bool isActive)

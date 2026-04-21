@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Config;
@@ -10,8 +9,8 @@ using Klavier.Core.Primitives;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
+using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Piano;
-using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views.Settings.KeybindsEditor;
@@ -21,20 +20,21 @@ public class KeybindsEditorWindow : Window
     private const string _WindowTitle = "Keybinds Editor";
     private const int _DefaultWidth = 800;
     private const int _DefaultHeight = 500;
-    private const int _MinWidth = 500;
+    private const int _MinWidth = 720;
     private const int _MinHeight = 450;
     private const string _ModifierLabel = "Modifier for black keys:";
     private const string _BackButtonLabel = "Back";
     private const string _SkipButtonLabel = "Skip";
     private const string _SaveButtonLabel = "Save";
     private const double _StatusFontSize = 20;
+    private const double _PianoFixedHeight = 120;
+    private const double _RootMargin = 16;
+    private const double _HeaderBottomMargin = 12;
+    private const double _StatusBottomMargin = 8;
+    private const double _ModifierLabelRightMargin = 8;
+    private const double _ButtonsRowSpacing = 8;
 
-    private static readonly string[] _ModifierOptions = ["Shift", "Ctrl", "Alt"];
     private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
-    private static readonly SolidColorBrush _DividerBrush = new(ThemePaletteProvider.Divider);
-    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
-    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
-    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
 
     private readonly KeyboardMapping _cloneSource;
     private readonly string? _existingLayoutName;
@@ -42,10 +42,11 @@ public class KeybindsEditorWindow : Window
     private readonly IPianoEngine _pianoEngine;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly TextBlock _statusText;
+    private readonly KlavierComboBox _modifierCombo;
     private readonly NoteNameStyle _noteNameStyle;
 
-    private NotePitch? _currentTarget;
     private int _targetIndex;
+    private bool _hasActiveTarget;
 
     public KeybindsEditorWindow(
         KeyboardMapping cloneSource,
@@ -70,10 +71,12 @@ public class KeybindsEditorWindow : Window
         _keysByPitch = keys.ToDictionary(k => k.Pitch);
         _pianoView = new PianoView(keys)
         {
-            Height = 120,
+            Height = _PianoFixedHeight,
             IsHitTestVisible = false,
         };
         _statusText = BuildStatusStrip();
+        _modifierCombo = BuildModifierCombo();
+        // TODO (2.7): wire _modifierCombo.SelectionChanged to confirm dialog + schema refresh.
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -83,57 +86,70 @@ public class KeybindsEditorWindow : Window
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
 
         Content = BuildLayout();
-        Closed += (_, _) => SetTarget(null);
+        Closed += (_, _) => Release();
 
         NavigateTo(0);
     }
 
     private void NavigateTo(int newIndex)
     {
-        int maxIndex = PianoKeysBuilder.LastPitch - PianoKeysBuilder.FirstPitch;
+        const int maxIndex = PianoKeysBuilder.LastPitch - PianoKeysBuilder.FirstPitch;
         if (newIndex < 0 || newIndex > maxIndex)
         {
             return;
         }
 
+        Release();
         _targetIndex = newIndex;
-        NotePitch target = new((ushort)(PianoKeysBuilder.FirstPitch + _targetIndex));
-        SetTarget(target);
-        _statusText.Text = $"Bind {NoteNames.GetNoteName(target, _noteNameStyle)}";
+        Press();
     }
 
-    public void SetTarget(NotePitch? newTarget)
+    private NotePitch CurrentPitch => new((ushort)(PianoKeysBuilder.FirstPitch + _targetIndex));
+
+    private void Press()
     {
-        if (_currentTarget is { } prev)
+        NotePitch pitch = CurrentPitch;
+        if (_keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? key))
         {
-            if (_keysByPitch.TryGetValue(prev, out PianoKeyViewModel? prevKey))
-            {
-                prevKey.IsPressed = false;
-            }
-            _pianoEngine.NoteOff(prev);
+            key.IsPressed = true;
         }
+        _pianoEngine.NoteOn(pitch);
+        _statusText.Text = $"Bind {NoteNames.GetNoteName(pitch, _noteNameStyle)}";
+        _hasActiveTarget = true;
+    }
 
-        _currentTarget = newTarget;
-
-        if (newTarget is { } next)
+    private void Release()
+    {
+        if (!_hasActiveTarget)
         {
-            if (_keysByPitch.TryGetValue(next, out PianoKeyViewModel? nextKey))
-            {
-                nextKey.IsPressed = true;
-            }
-            _pianoEngine.NoteOn(next);
+            return;
         }
+        NotePitch pitch = CurrentPitch;
+        if (_keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? key))
+        {
+            key.IsPressed = false;
+        }
+        _pianoEngine.NoteOff(pitch);
+        _hasActiveTarget = false;
     }
 
     private Grid BuildLayout()
     {
         DockPanel header = BuildHeader();
-        Control schema = BuildPlaceholder("PC keyboard schema (2.5)", minHeight: 120);
+        Viewbox schema = new()
+        {
+            Stretch = Stretch.Uniform,
+            Child = new PcKeyboardSchema(
+                _cloneSource.WhiteKeys,
+                _cloneSource.BlackKeys,
+                _cloneSource.BlackKeyModifier,
+                _noteNameStyle),
+        };
         StackPanel buttons = BuildButtonsRow();
 
         Grid root = new()
         {
-            Margin = new Thickness(16),
+            Margin = new Thickness(_RootMargin),
             RowDefinitions =
             {
                 new RowDefinition { Height = GridLength.Auto },
@@ -166,48 +182,23 @@ public class KeybindsEditorWindow : Window
             Text = _ModifierLabel,
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = _TextBrush,
-            Margin = new Thickness(0, 0, 8, 0),
+            Margin = new Thickness(0, 0, _ModifierLabelRightMargin, 0),
         };
-
-        ComboBox combo = new()
-        {
-            ItemsSource = _ModifierOptions,
-            SelectedItem = ModifierToOption(_cloneSource.BlackKeyModifier),
-            MinWidth = 120,
-            VerticalAlignment = VerticalAlignment.Center,
-            Focusable = false,
-            Background = _ContrastedSurfaceBrush,
-            BorderBrush = _NeutralSurfaceBrush,
-        };
-        combo.Resources["ComboBoxBorderBrushPointerOver"] = _HoverHighlightBrush;
 
         DockPanel.SetDock(label, Dock.Left);
         return new DockPanel
         {
-            Margin = new Thickness(0, 0, 0, 12),
+            Margin = new Thickness(0, 0, 0, _HeaderBottomMargin),
             HorizontalAlignment = HorizontalAlignment.Left,
-            Children = { label, combo },
+            Children = { label, _modifierCombo },
         };
     }
 
-    private static Border BuildPlaceholder(string text, double minHeight)
+    private KlavierComboBox BuildModifierCombo() => new()
     {
-        return new Border
-        {
-            BorderBrush = _DividerBrush,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-            MinHeight = minHeight,
-            Margin = new Thickness(0, 0, 0, 8),
-            Child = new TextBlock
-            {
-                Text = text,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Foreground = _TextBrush,
-            },
-        };
-    }
+        ItemsSource = KeyModifierOptions.AllLabels,
+        SelectedItem = KeyModifierOptions.LabelOf(_cloneSource.BlackKeyModifier),
+    };
 
     private static TextBlock BuildStatusStrip()
     {
@@ -216,43 +207,35 @@ public class KeybindsEditorWindow : Window
             Text = string.Empty,
             HorizontalAlignment = HorizontalAlignment.Center,
             FontSize = _StatusFontSize,
-            Margin = new Thickness(0, 0, 0, 8),
+            Margin = new Thickness(0, 0, 0, _StatusBottomMargin),
             Foreground = _TextBrush,
         };
     }
 
     private StackPanel BuildButtonsRow()
     {
-        ToolbarButton backButton = new(_BackButtonLabel);
+        KlavierButton backButton = new(_BackButtonLabel);
         backButton.PointerPressed += (_, e) =>
         {
             NavigateTo(_targetIndex - 1);
             e.Handled = true;
         };
 
-        ToolbarButton skipButton = new(_SkipButtonLabel);
+        KlavierButton skipButton = new(_SkipButtonLabel);
         skipButton.PointerPressed += (_, e) =>
         {
             NavigateTo(_targetIndex + 1);
             e.Handled = true;
         };
 
-        ToolbarButton saveButton = new(_SaveButtonLabel);
+        KlavierButton saveButton = new(_SaveButtonLabel);
 
         return new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8,
+            Spacing = _ButtonsRowSpacing,
             Children = { backButton, skipButton, saveButton },
         };
     }
-
-    private static string ModifierToOption(KeyModifiers modifier) => modifier switch
-    {
-        KeyModifiers.Shift => "Shift",
-        KeyModifiers.Control => "Ctrl",
-        KeyModifiers.Alt => "Alt",
-        _ => "Shift",
-    };
 }

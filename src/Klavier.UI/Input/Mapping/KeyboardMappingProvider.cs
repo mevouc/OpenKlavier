@@ -114,12 +114,8 @@ public static class KeyboardMappingProvider
 
     private static KeyModifiers ParseModifier(string modifier)
     {
-        return modifier switch
-        {
-            "Shift" => KeyModifiers.Shift,
-            "Ctrl" => KeyModifiers.Control,
-            "Alt" => KeyModifiers.Alt,
-            _ => throw new ArgumentException($"Unknown black key modifier: '{modifier}'. Expected 'Shift', 'Ctrl', or 'Alt'."),
-        };
+        return KeyModifierOptions.ParseLabel(modifier)
+            ?? throw new ArgumentException(
+                $"Unknown black key modifier: '{modifier}'. Expected one of: {string.Join(", ", KeyModifierOptions.AllLabels)}.");
     }
 }

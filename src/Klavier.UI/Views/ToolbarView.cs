@@ -5,9 +5,10 @@ using Avalonia.Media;
 using Klavier.Config;
 using Klavier.Core.Engine;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.Controls;
 using Microsoft.Extensions.Options;
 
-namespace Klavier.UI.Views.Toolbar;
+namespace Klavier.UI.Views;
 
 public class ToolbarView : Border
 {
@@ -20,7 +21,7 @@ public class ToolbarView : Border
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(8, 4);
 
-        ToolbarButton panicButton = new("Panic");
+        KlavierButton panicButton = new("Panic");
         panicButton.PointerPressed += (_, e) =>
         {
             pianoEngine.Panic();
@@ -28,16 +29,10 @@ public class ToolbarView : Border
             {
                 pianoEngine.SustainOn();
             }
-            panicButton.IsActive = true;
-            e.Handled = true;
-        };
-        panicButton.PointerReleased += (_, e) =>
-        {
-            panicButton.IsActive = false;
             e.Handled = true;
         };
 
-        ToolbarButton settingsButton = new("Settings") { Margin = new Thickness(4, 0, 0, 0) };
+        KlavierButton settingsButton = new("Settings", momentaryActiveOnPress: false) { Margin = new Thickness(4, 0, 0, 0) };
         settingsButton.PointerPressed += (_, e) =>
         {
             _isSettingsOpen = !_isSettingsOpen;

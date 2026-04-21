@@ -8,9 +8,9 @@ using Klavier.Config;
 using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Settings.KeybindsEditor;
-using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -48,7 +48,7 @@ public partial class SettingsPanel
         };
     }
 
-    private static DockPanel CreateResetRow(ToolbarButton button)
+    private static DockPanel CreateResetRow(KlavierButton button)
     {
         button.HorizontalAlignment = HorizontalAlignment.Right;
         button.Margin = new Thickness(0, 4, 0, 0);
@@ -104,24 +104,14 @@ public partial class SettingsPanel
         };
     }
 
-    private static ComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
+    private static KlavierComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
         => CreateComboBox(Enum.GetValues<TEnum>(), selectedValue);
 
-    private static ComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue)
+    private static KlavierComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue) => new()
     {
-        ComboBox comboBox = new()
-        {
-            ItemsSource = items,
-            SelectedItem = selectedValue,
-            VerticalAlignment = VerticalAlignment.Center,
-            MinWidth = 120,
-            Focusable = false,
-            Background = _ContrastedSurfaceBrush,
-            BorderBrush = _NeutralSurfaceBrush,
-        };
-        comboBox.Resources["ComboBoxBorderBrushPointerOver"] = _HoverHighlightBrush;
-        return comboBox;
-    }
+        ItemsSource = items,
+        SelectedItem = selectedValue,
+    };
 
     private static ToggleSwitch CreateToggleSwitch(bool isOn)
     {
@@ -299,7 +289,7 @@ public partial class SettingsPanel
         {
             Background = _ContrastedSurfaceBrush,
             BorderBrush = _NeutralSurfaceBrush,
-            BorderThickness = new Thickness(1),
+            BorderThickness = new Thickness(Constants.BorderThickness),
             CornerRadius = new CornerRadius(Constants.CornerRadius),
             ClipToBounds = true,
             MinWidth = 200,

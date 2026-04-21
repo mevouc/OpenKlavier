@@ -4,7 +4,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Klavier.UI.Theme;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Controls;
 
 public abstract class ActivableControl : Border
 {
@@ -32,7 +32,7 @@ public abstract class ActivableControl : Border
     {
         Background = _DefaultBackgroundBrush;
         BorderBrush = _DefaultBorderBrush;
-        BorderThickness = new Thickness(1);
+        BorderThickness = new Thickness(Constants.BorderThickness);
         CornerRadius = new CornerRadius(Constants.CornerRadius);
         Cursor = new Cursor(StandardCursorType.Hand);
 

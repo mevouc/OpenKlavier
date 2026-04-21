@@ -8,9 +8,9 @@ using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Ports;
 using Klavier.UI.Theme;
+using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Settings.KeybindsEditor;
-using Klavier.UI.Views.Toolbar;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -174,16 +174,10 @@ public partial class SettingsPanel : Border
         }));
 
         // Wire reset
-        ToolbarButton resetButton = new(_ResetDefaultsButtonLabel);
+        KlavierButton resetButton = new(_ResetDefaultsButtonLabel);
         resetButton.PointerPressed += (_, e) =>
         {
             _settingsService.ResetAll();
-            resetButton.IsActive = true;
-            e.Handled = true;
-        };
-        resetButton.PointerReleased += (_, e) =>
-        {
-            resetButton.IsActive = false;
             e.Handled = true;
         };
 

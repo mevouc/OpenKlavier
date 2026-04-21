@@ -21,6 +21,12 @@ public class PianoKeyControl : Border
     private static readonly SolidColorBrush _WhiteKeyTextBrush = new(Colors.Black);
     private static readonly SolidColorBrush _BlackKeyTextBrush = new(Colors.White);
 
+    private const double _KeyLabelWidthFactor = 0.4;
+    private const double _NoteLabelWidthFactor = 0.35;
+    private const double _MinFontSize = 5;
+    private const double _MaxKeyLabelFontSize = 24;
+    private const double _MaxNoteLabelFontSize = 20;
+
     private readonly PianoKeyViewModel _viewModel;
     private readonly TextBlock _keyLabelText;
     private readonly TextBlock _noteLabelText;
@@ -30,7 +36,7 @@ public class PianoKeyControl : Border
         _viewModel = viewModel;
 
         BorderBrush = _DefaultBorderBrush;
-        BorderThickness = new Thickness(1);
+        BorderThickness = new Thickness(Constants.BorderThickness);
         CornerRadius = new CornerRadius(0, 0, Constants.CornerRadius, Constants.CornerRadius);
         Cursor = new Cursor(StandardCursorType.Hand);
 
@@ -69,6 +75,13 @@ public class PianoKeyControl : Border
 
         PointerPressed += OnPointerPressed;
         PointerReleased += OnPointerReleased;
+        SizeChanged += OnSizeChanged;
+    }
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        _keyLabelText.FontSize = Math.Clamp(e.NewSize.Width * _KeyLabelWidthFactor, _MinFontSize, _MaxKeyLabelFontSize);
+        _noteLabelText.FontSize = Math.Clamp(e.NewSize.Width * _NoteLabelWidthFactor, _MinFontSize, _MaxNoteLabelFontSize);
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)

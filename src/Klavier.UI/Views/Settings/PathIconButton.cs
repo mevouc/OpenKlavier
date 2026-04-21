@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Klavier.UI.Views.Controls;
 
 namespace Klavier.UI.Views.Settings;
 

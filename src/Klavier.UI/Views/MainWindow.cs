@@ -8,7 +8,6 @@ using Klavier.Config;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
 using Klavier.UI.Views.Piano;
-using Klavier.UI.Views.Toolbar;
 
 namespace Klavier.UI.Views;
 
