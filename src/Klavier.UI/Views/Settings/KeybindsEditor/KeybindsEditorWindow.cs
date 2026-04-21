@@ -75,7 +75,7 @@ public class KeybindsEditorWindow : Window
 
         _statusText = BuildStatusStrip();
         _modifierCombo = BuildModifierCombo();
-        // TODO (2.7): wire _modifierCombo.SelectionChanged to confirm dialog + schema refresh.
+        _modifierCombo.SelectionChanged += OnModifierSelectionChanged;
 
         _schemaViewbox = new Viewbox
         {
@@ -256,6 +256,15 @@ public class KeybindsEditorWindow : Window
         ItemsSource = KeyModifierOptions.AllLabels,
         SelectedItem = KeyModifierOptions.LabelOf(_session.BlackKeyModifier),
     };
+
+    private void OnModifierSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_modifierCombo.SelectedItem is string label
+            && KeyModifierOptions.ParseLabel(label) is { } modifier)
+        {
+            _session.SetModifier(modifier);
+        }
+    }
 
     private static TextBlock BuildStatusStrip()
     {

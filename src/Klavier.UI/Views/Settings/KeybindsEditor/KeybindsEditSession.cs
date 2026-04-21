@@ -16,10 +16,36 @@ public class KeybindsEditSession(KeyboardMapping source)
 
     public IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> WhiteBindings => _whiteBindings;
     public IReadOnlyDictionary<PhysicalKey, KeyMappingEntry> BlackBindings => _blackBindings;
-    public KeyModifiers BlackKeyModifier { get; } = source.BlackKeyModifier;
+    public KeyModifiers BlackKeyModifier { get; private set; } = source.BlackKeyModifier;
     public bool IsDirty { get; private set; }
 
     public event Action? BindingsChanged;
+
+    /// <summary>
+    /// Change the layout's black-key modifier. All existing black labels are re-derived with the new
+    /// symbol prefix. No-op if the modifier is unchanged.
+    /// </summary>
+    public void SetModifier(KeyModifiers modifier)
+    {
+        if (BlackKeyModifier == modifier)
+        {
+            return;
+        }
+
+        BlackKeyModifier = modifier;
+        string symbol = KeyModifierOptions.SymbolOf(modifier);
+
+        foreach ((PhysicalKey physicalKey, KeyMappingEntry blackEntry) in _blackBindings.ToList())
+        {
+            if (_whiteBindings.TryGetValue(physicalKey, out KeyMappingEntry whiteEntry))
+            {
+                _blackBindings[physicalKey] = new KeyMappingEntry(blackEntry.Pitch, symbol + whiteEntry.Label);
+            }
+        }
+
+        IsDirty = true;
+        BindingsChanged?.Invoke();
+    }
 
     /// <summary>
     /// Apply a binding of <paramref name="physicalKey"/> (with its captured <paramref name="keySymbol"/>)
