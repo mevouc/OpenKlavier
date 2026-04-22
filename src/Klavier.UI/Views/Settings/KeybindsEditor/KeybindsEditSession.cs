@@ -47,9 +47,10 @@ public class KeybindsEditSession(KeyboardMapping source)
         BlackKeyModifier = modifier;
         string symbol = KeyModifierOptions.SymbolOf(modifier);
 
-        foreach ((PhysicalKey physicalKey, KeyMappingEntry blackEntry) in _blackBindings.ToList())
+        // Iterate the non-mutated whiteBindings, look up the black counterpart for each.
+        foreach ((PhysicalKey physicalKey, KeyMappingEntry whiteEntry) in _whiteBindings)
         {
-            if (_whiteBindings.TryGetValue(physicalKey, out KeyMappingEntry whiteEntry))
+            if (_blackBindings.TryGetValue(physicalKey, out KeyMappingEntry blackEntry))
             {
                 _blackBindings[physicalKey] = new KeyMappingEntry(blackEntry.Pitch, symbol + whiteEntry.Label);
             }

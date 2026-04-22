@@ -137,8 +137,16 @@ public class KeybindsEditorWindow : Window
             return;
         }
 
-        BindingResult result = _session.Apply(targetPitch, e.PhysicalKey, e.KeySymbol);
-        ClearPendingTarget();
+        BindingResult result;
+        try
+        {
+            result = _session.Apply(targetPitch, e.PhysicalKey, e.KeySymbol);
+        }
+        finally
+        {
+            // Always release the pending piano key even if Apply throws mid-way.
+            ClearPendingTarget();
+        }
 
         if (result.DisplacedFromPitch is { } displaced)
         {
@@ -312,6 +320,10 @@ public class KeybindsEditorWindow : Window
             try
             {
                 await SaveAsync();
+            }
+            catch (Exception ex)
+            {
+                _statusText.Text = $"Save failed: {ex.Message}";
             }
             finally
             {

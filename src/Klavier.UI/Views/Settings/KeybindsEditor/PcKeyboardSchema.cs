@@ -12,6 +12,7 @@ public partial class PcKeyboardSchema : StackPanel
     private const double _RowSpacing = 2;
     private const double _KeySpacing = 2;
     private const double _KeyUnit = _KeyWidth + _KeySpacing;
+    private const double _CtrlAltRowOffset = 0;
 
     // Typewriter-style x-axis shift per row (indexed into BindableKeys.Rows).
     private static readonly double[] _RowOffsets =
@@ -79,7 +80,7 @@ public partial class PcKeyboardSchema : StackPanel
             Orientation = Orientation.Horizontal,
             Spacing = _KeySpacing,
             HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Thickness(_RowOffsets[^1], 0, 0, 0),
+            Margin = new Thickness(_CtrlAltRowOffset, 0, 0, 0),
         };
 
         row.Children.Add(BuildModifierBlock("Ctrl", activeModifier == KeyModifiers.Control));

@@ -26,6 +26,7 @@ public class KeyboardInputHandler
 
         ApplySustainMode(uiConfig.CurrentValue.SustainMode);
         uiConfig.OnChange(OnUIConfigChanged);
+        KeyboardMappingProvider.LayoutsChanged += ReloadMapping;
     }
 
     private void OnUIConfigChanged(UIConfig newConfig)
@@ -37,10 +38,14 @@ public class KeyboardInputHandler
 
         if (newConfig.KeyboardLayout != _lastUiConfig.KeyboardLayout)
         {
-            _mapping = KeyboardMappingProvider.Load(newConfig.KeyboardLayout);
-            _heldNotes.Clear();
+            ReloadMapping();
         }
         _lastUiConfig = newConfig;
+    }
+
+    private void ReloadMapping()
+    {
+        _mapping = KeyboardMappingProvider.Load(_uiConfig.CurrentValue.KeyboardLayout);
     }
 
     private void ApplySustainMode(SustainMode mode)

@@ -29,6 +29,7 @@ public class NameLayoutDialog : Window
     private readonly TextBox _nameBox;
     private readonly TextBlock _feedbackText;
     private readonly KlavierButton _saveButton;
+    private readonly KlavierButton _cancelButton;
 
     /// <summary>
     /// The confirmed layout name after the dialog closes, or null if the user cancelled.
@@ -57,6 +58,7 @@ public class NameLayoutDialog : Window
             FontSize = Constants.PrimaryFontSize,
             TextWrapping = TextWrapping.Wrap,
             IsVisible = false,
+            Margin = new Thickness(0, _ControlSpacing, 0, _ControlSpacing),
         };
 
         _saveButton = new KlavierButton(_SaveButtonLabel);
@@ -66,14 +68,14 @@ public class NameLayoutDialog : Window
             e.Handled = true;
         };
 
-        KlavierButton cancelButton = new(_CancelButtonLabel);
-        cancelButton.PointerPressed += (_, e) =>
+        _cancelButton = new KlavierButton(_CancelButtonLabel);
+        _cancelButton.PointerPressed += (_, e) =>
         {
             Close();
             e.Handled = true;
         };
 
-        Content = BuildLayout(cancelButton);
+        Content = BuildLayout();
         KeyDown += OnDialogKeyDown;
         UpdateFeedback();
     }
@@ -133,7 +135,7 @@ public class NameLayoutDialog : Window
         return File.Exists(path);
     }
 
-    private Grid BuildLayout(KlavierButton cancelButton)
+    private Grid BuildLayout()
     {
         TextBlock prompt = new()
         {
@@ -148,7 +150,7 @@ public class NameLayoutDialog : Window
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = _ButtonsRowSpacing,
-            Children = { cancelButton, _saveButton },
+            Children = { _cancelButton, _saveButton },
         };
 
         Grid root = new()
@@ -167,8 +169,6 @@ public class NameLayoutDialog : Window
         Grid.SetRow(_nameBox, 1);
         Grid.SetRow(_feedbackText, 2);
         Grid.SetRow(buttons, 3);
-
-        _feedbackText.Margin = new Thickness(0, _ControlSpacing, 0, _ControlSpacing);
 
         root.Children.Add(prompt);
         root.Children.Add(_nameBox);
