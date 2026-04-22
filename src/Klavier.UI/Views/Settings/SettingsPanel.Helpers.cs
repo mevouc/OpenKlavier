@@ -24,6 +24,7 @@ public partial class SettingsPanel
         return new DockPanel
         {
             MinHeight = _MinRowHeight,
+            Margin = new Thickness(_RowIndent, 0, 0, 0),
             Children =
             {
                 CreateLabel(label),
@@ -39,6 +40,7 @@ public partial class SettingsPanel
         return new DockPanel
         {
             MinHeight = _MinRowHeight,
+            Margin = new Thickness(_RowIndent, 0, 0, 0),
             Children =
             {
                 CreateLabel(label),
@@ -58,6 +60,18 @@ public partial class SettingsPanel
         panel.Children.Add(button);
 
         return panel;
+    }
+
+    private static TextBlock CreateSectionHeader(string title)
+    {
+        return new TextBlock
+        {
+            Text = title,
+            Foreground = _TextBrush,
+            FontSize = Constants.PrimaryFontSize + 2,
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(0, 14, 0, 6),
+        };
     }
 
     private static TextBlock CreateLabel(string text)

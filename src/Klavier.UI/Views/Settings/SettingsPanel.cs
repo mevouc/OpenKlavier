@@ -24,6 +24,7 @@ public partial class SettingsPanel : Border
     private const double _LabelWidth = 130;
     private const double _ValueWidth = 40;
     private const double _MinRowHeight = 32;
+    private const double _RowIndent = 20;
 
     private const string _VelocityLabel = "Velocity";
     private const string _TransposeLabel = "Transpose";
@@ -42,6 +43,12 @@ public partial class SettingsPanel : Border
     private const string _KeyBorderLabel = "Key Border (restart)";
     private const string _KeyboardLayoutLabel = "Keyboard Layout";
     private const string _ResetDefaultsButtonLabel = "Reset Defaults";
+
+    private const string _SoundSectionTitle = "Sound & Playback";
+    private const string _PianoDisplaySectionTitle = "Piano Display";
+    private const string _KeyboardSectionTitle = "Keyboard";
+    private const string _WindowSectionTitle = "Window";
+    private const string _ThemeSectionTitle = "Theme & Colors";
 
     private readonly IUserSettingsService _settingsService;
     private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
@@ -197,22 +204,32 @@ public partial class SettingsPanel : Border
                 Margin = new Thickness(0, 0, 16, 0),
                 Children =
                 {
+                    CreateSectionHeader(_SoundSectionTitle),
                     CreateRow(_VelocityLabel, velocityValue, velocitySlider),
                     CreateRow(_TransposeLabel, transposeValue, transposeSlider),
                     CreateRow(_VolumeLabel, volumeValue, volumeSlider),
+                    CreateRow(_SustainModeLabel, sustainModeCombo),
                     CreateRow(_SoundFontLabel, soundFontPickerControl),
                     CreateRow(_PresetLabel, presetCombo),
-                    CreateRow(_SustainModeLabel, sustainModeCombo),
-                    CreateRow(_TopmostLabel, topmostToggle),
+
+                    CreateSectionHeader(_PianoDisplaySectionTitle),
                     CreateRow(_ShowKeyLabelsLabel, keyLabelsToggle),
                     CreateRow(_ShowNoteLabelsLabel, noteLabelsToggle),
                     CreateRow(_NoteNameStyleLabel, noteNameStyleCombo),
+
+                    CreateSectionHeader(_ThemeSectionTitle),
                     CreateRow(_ThemeLabel, themeCombo),
                     CreateRow(_AccentLabel, accentHexTextBox),
                     CreateRow(_WhiteKeyLabel, whiteKeyHexTextBox),
                     CreateRow(_BlackKeyLabel, blackKeyHexTextBox),
                     CreateRow(_KeyBorderLabel, keyBorderHexTextBox),
+
+                    CreateSectionHeader(_WindowSectionTitle),
+                    CreateRow(_TopmostLabel, topmostToggle),
+
+                    CreateSectionHeader(_KeyboardSectionTitle),
                     CreateRow(_KeyboardLayoutLabel, keyboardLayoutRow),
+
                     CreateResetRow(resetButton),
                 },
             },

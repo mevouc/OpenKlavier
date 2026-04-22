@@ -20,7 +20,7 @@ public class MainWindow : Window
     private const int _MinHeight = 150;
     private const int _SettingsMinHeight = 150;
     private const int _SplitterHeight = 8;
-    private const int _DefaultSettingsHeight = 200;
+    private const int _DefaultSettingsHeight = 300;
 
     private readonly KeyboardInputHandler _keyboardInput;
     private readonly SettingsPanel _settingsPanel;
