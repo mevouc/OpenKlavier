@@ -19,9 +19,9 @@ public partial class SettingsPanel
 {
     private const string _SoundFontPickerTitle = "Choose a SoundFont file";
 
-    private static DockPanel CreateRow(string label, Control control)
+    private static DockPanel CreateRow(string label, Control control, string? tooltip = null)
     {
-        return new DockPanel
+        DockPanel row = new()
         {
             MinHeight = _MinRowHeight,
             Margin = new Thickness(_RowIndent, 0, 0, 0),
@@ -31,13 +31,18 @@ public partial class SettingsPanel
                 control,
             },
         };
+        if (tooltip is not null)
+        {
+            ToolTip.SetTip(row, tooltip);
+        }
+        return row;
     }
 
-    private static DockPanel CreateRow(string label, TextBlock valueLabel, Slider slider)
+    private static DockPanel CreateRow(string label, TextBlock valueLabel, Slider slider, string? tooltip = null)
     {
         DockPanel.SetDock(valueLabel, Dock.Left);
 
-        return new DockPanel
+        DockPanel row = new()
         {
             MinHeight = _MinRowHeight,
             Margin = new Thickness(_RowIndent, 0, 0, 0),
@@ -48,6 +53,11 @@ public partial class SettingsPanel
                 slider,
             },
         };
+        if (tooltip is not null)
+        {
+            ToolTip.SetTip(row, tooltip);
+        }
+        return row;
     }
 
     private static DockPanel CreateResetRow(KlavierButton button)
@@ -62,15 +72,36 @@ public partial class SettingsPanel
         return panel;
     }
 
-    private static TextBlock CreateSectionHeader(string title)
+    private static Control CreateSectionHeader(string title, string? subtext = null)
     {
-        return new TextBlock
+        TextBlock titleBlock = new()
         {
             Text = title,
             Foreground = _TextBrush,
             FontSize = Constants.PrimaryFontSize + 2,
             FontWeight = FontWeight.Bold,
+        };
+
+        if (subtext is null)
+        {
+            titleBlock.Margin = new Thickness(0, 14, 0, 6);
+            return titleBlock;
+        }
+
+        TextBlock subtextBlock = new()
+        {
+            Text = subtext,
+            Foreground = _SubtextBrush,
+            FontSize = Constants.PrimaryFontSize - 1,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(8, 0, 0, 2),
+        };
+
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
             Margin = new Thickness(0, 14, 0, 6),
+            Children = { titleBlock, subtextBlock },
         };
     }
 

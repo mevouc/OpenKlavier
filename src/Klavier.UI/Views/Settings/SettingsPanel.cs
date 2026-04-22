@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.Config;
@@ -18,6 +19,7 @@ namespace Klavier.UI.Views;
 public partial class SettingsPanel : Border
 {
     private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _SubtextBrush = new(ThemePaletteProvider.TextPrimary) { Opacity = 0.7 };
     private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
     private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
     private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
@@ -29,20 +31,32 @@ public partial class SettingsPanel : Border
     private const string _VelocityLabel = "Velocity";
     private const string _TransposeLabel = "Transpose";
     private const string _VolumeLabel = "Volume";
-    private const string _SustainModeLabel = "Sustain Mode";
-    private const string _TopmostLabel = "Topmost";
-    private const string _ShowKeyLabelsLabel = "Show Key Labels";
-    private const string _ShowNoteLabelsLabel = "Show Note Labels";
-    private const string _NoteNameStyleLabel = "Note Name Style";
-    private const string _PresetLabel = "Preset";
+    private const string _SustainModeLabel = "Sustain behavior";
+    private const string _TopmostLabel = "Always on top";
+    private const string _ShowKeyLabelsLabel = "Show keyboard keys";
+    private const string _ShowNoteLabelsLabel = "Show note names";
+    private const string _NoteNameStyleLabel = "Note notation";
+    private const string _PresetLabel = "Instrument";
     private const string _SoundFontLabel = "SoundFont";
-    private const string _ThemeLabel = "Theme (restart)";
-    private const string _AccentLabel = "Accent (restart)";
-    private const string _WhiteKeyLabel = "White Key (restart)";
-    private const string _BlackKeyLabel = "Black Key (restart)";
-    private const string _KeyBorderLabel = "Key Border (restart)";
-    private const string _KeyboardLayoutLabel = "Keyboard Layout";
-    private const string _ResetDefaultsButtonLabel = "Reset Defaults";
+    private const string _ThemeLabel = "Theme";
+    private const string _AccentLabel = "Accent color";
+    private const string _WhiteKeyLabel = "White key color";
+    private const string _BlackKeyLabel = "Black key color";
+    private const string _KeyBorderLabel = "Key border color";
+    private const string _KeyboardLayoutLabel = "Keyboard layout";
+    private const string _ResetDefaultsButtonLabel = "Reset defaults";
+
+    private const string _VelocityTooltip = "How hard keys are pressed (0 - 127).\nHigher: louder and brighter timbre";
+    private const string _TransposeTooltip = "Shift note pitches up or down by semitones (-24 - 24)";
+    private const string _SustainModeTooltip = "Hold: sustain while pressed\nInverted hold: sustain while released\nToggle: press to flip on/off";
+    private const string _ShowKeyLabelsTooltip = "Overlay computer keyboard letters on piano keys";
+    private const string _ShowNoteLabelsTooltip = "Overlay musical note names on piano keys";
+    private const string _NoteNameStyleTooltip = "Scientific: C4\nSolfege: Do\nHelmholtz: c'";
+    private const string _SoundFontTooltip = "A .sf2/.sf3 file defining instrument sounds";
+    private const string _PresetTooltip = "Instrument sound from the SoundFont file";
+    private const string _AccentTooltip = "Highlight color used across the UI";
+    private const string _KeyBorderTooltip = "Color of the outline around each key";
+    private const string _KeyboardLayoutTooltip = "Mapping of computer keys to piano notes";
 
     private const string _SoundSectionTitle = "Sound & Playback";
     private const string _PianoDisplaySectionTitle = "Piano Display";
@@ -82,6 +96,14 @@ public partial class SettingsPanel : Border
         TextBlock volumeValue = CreateValueLabel($"{audio.VolumeInPercent}%");
 
         ComboBox sustainModeCombo = CreateComboBox(ui.SustainMode);
+        sustainModeCombo.ItemTemplate = new FuncDataTemplate<SustainMode>((mode, _) => new TextBlock
+        {
+            Text = mode switch
+            {
+                SustainMode.InvertedHold => "Inverted hold",
+                _ => mode.ToString(),
+            },
+        });
         ToggleSwitch topmostToggle = CreateToggleSwitch(ui.Topmost);
         ToggleSwitch keyLabelsToggle = CreateToggleSwitch(ui.ShowKeyLabels);
         ToggleSwitch noteLabelsToggle = CreateToggleSwitch(ui.ShowNoteLabels);
@@ -205,30 +227,30 @@ public partial class SettingsPanel : Border
                 Children =
                 {
                     CreateSectionHeader(_SoundSectionTitle),
-                    CreateRow(_VelocityLabel, velocityValue, velocitySlider),
-                    CreateRow(_TransposeLabel, transposeValue, transposeSlider),
+                    CreateRow(_VelocityLabel, velocityValue, velocitySlider, tooltip: _VelocityTooltip),
+                    CreateRow(_TransposeLabel, transposeValue, transposeSlider, tooltip: _TransposeTooltip),
                     CreateRow(_VolumeLabel, volumeValue, volumeSlider),
-                    CreateRow(_SustainModeLabel, sustainModeCombo),
-                    CreateRow(_SoundFontLabel, soundFontPickerControl),
-                    CreateRow(_PresetLabel, presetCombo),
+                    CreateRow(_SustainModeLabel, sustainModeCombo, tooltip: _SustainModeTooltip),
+                    CreateRow(_SoundFontLabel, soundFontPickerControl, tooltip: _SoundFontTooltip),
+                    CreateRow(_PresetLabel, presetCombo, tooltip: _PresetTooltip),
 
                     CreateSectionHeader(_PianoDisplaySectionTitle),
-                    CreateRow(_ShowKeyLabelsLabel, keyLabelsToggle),
-                    CreateRow(_ShowNoteLabelsLabel, noteLabelsToggle),
-                    CreateRow(_NoteNameStyleLabel, noteNameStyleCombo),
+                    CreateRow(_ShowKeyLabelsLabel, keyLabelsToggle, tooltip: _ShowKeyLabelsTooltip),
+                    CreateRow(_ShowNoteLabelsLabel, noteLabelsToggle, tooltip: _ShowNoteLabelsTooltip),
+                    CreateRow(_NoteNameStyleLabel, noteNameStyleCombo, tooltip: _NoteNameStyleTooltip),
 
-                    CreateSectionHeader(_ThemeSectionTitle),
+                    CreateSectionHeader(_ThemeSectionTitle, "(requires restart)"),
                     CreateRow(_ThemeLabel, themeCombo),
-                    CreateRow(_AccentLabel, accentHexTextBox),
+                    CreateRow(_AccentLabel, accentHexTextBox, tooltip: _AccentTooltip),
                     CreateRow(_WhiteKeyLabel, whiteKeyHexTextBox),
                     CreateRow(_BlackKeyLabel, blackKeyHexTextBox),
-                    CreateRow(_KeyBorderLabel, keyBorderHexTextBox),
+                    CreateRow(_KeyBorderLabel, keyBorderHexTextBox, tooltip: _KeyBorderTooltip),
 
                     CreateSectionHeader(_WindowSectionTitle),
                     CreateRow(_TopmostLabel, topmostToggle),
 
                     CreateSectionHeader(_KeyboardSectionTitle),
-                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutRow),
+                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutRow, tooltip: _KeyboardLayoutTooltip),
 
                     CreateResetRow(resetButton),
                 },
