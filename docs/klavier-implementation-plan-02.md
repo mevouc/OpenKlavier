@@ -256,45 +256,127 @@ Once Step 2's control is agreed:
 
 ## Iteration 12: Custom Keybinds
 
-**Goal:** Let users remap PC keyboard keys to piano notes, with preset layouts.
+### Context
 
-- **UI:** Opens a **separate window** for key mapping configuration (design details deferred to implementation time).
-- **Presets:** Ship QWERTY and AZERTY preset layouts. Users can also create fully custom layouts.
-- **Integration:** Builds on the existing `KeyboardMappingProvider` and `PhysicalKey → NotePitch` mapping system.
+Users currently pick between three shipped layouts (`qwerty`, `azerty`, `dvorak-fr`) from the `Keyboard Layout` dropdown in the settings panel. Each layout is a JSON file at `src/Klavier/mappings/*.json` with the same schema: `blackKeyModifier` + `whiteKeys` / `blackKeys` dictionaries keyed by `PhysicalKey` enum names, each entry carrying `pitch` (MIDI 0-127) and `label` (display string).
+
+**Goal:** Let users create and edit their own layouts *in the same JSON format*, so `KeyboardMappingProvider` and `KeyboardInputHandler` need only minimal changes. The author UI is a separate window with a **piano-driven wizard**: the editor highlights each piano key in chromatic order (C2→C7), and the user presses a PC key to capture `(PhysicalKey, KeySymbol)` for that note. `KeySymbol` becomes the label, avoiding any scancode-to-character conversion (see `project_keyboard_layout_strategy.md` memory).
+
+### Design decisions (locked in)
+
+- **Editor flow**: piano-driven wizard. Sequentially highlights each piano key C2→C7; user presses a PC key to bind. Skip / Back / Save buttons for navigation. No schema-clicking.
+- **Starting point**: clone the currently selected layout. Each target piano key is pre-filled from the clone; pressing a PC key remaps it, `[Skip]` keeps the existing binding.
+- **Black-key modifier**: per-layout, picked upfront at the top of the editor window (dropdown: `Shift` / `Ctrl` / `Alt`, defaulting to the clone source's modifier). Same modifier for every black piano key.
+- **Reserved keys during wizard**: `Escape` cancels the wizard (confirm-discard if dirty). `Space` is rejected with an inline warning ("Space is reserved for sustain").
+- **PC key reuse within the session**: warn + auto-unbind the previous piano key that used that PC key. Result: at most one piano key per PC key in the final JSON.
+- **Piano range**: C2-C7 (MIDI 36-96), 61 piano keys total (36 white + 25 black), matching built-ins.
+- **Storage**: `%LocalAppData%/Klavier/mappings/*.json`. `KeyboardMappingProvider` reads from *two* roots (built-ins at `AppContext.BaseDirectory/mappings/` + customs at user dir), merged **with user dir winning on name collision**. Saving a layout with a built-in name (e.g. `qwerty`) is allowed and effectively creates a user-side override of the built-in; the original built-in file is untouched and can be restored by deleting the user override from disk.
+- **CRUD**: Create + Edit. No Delete in this iteration (user removes the user-dir file manually to revert an override or drop a custom).
+- **Naming**: prompted at save time via a small dialog. Empty name and invalid filename chars are rejected. Built-in stems are **allowed** (they create overrides). Collision with an existing user-dir file (including an existing override) prompts confirm-overwrite.
+
+### Step 1 - Two-location mapping discovery
+
+- `src/Klavier.UI/Input/Mapping/KeyboardMappingProvider.cs`:
+  - `UserMappingsDirectory`: static property returning `Path.Combine(Environment.GetFolderPath(SpecialFolder.LocalApplicationData), "Klavier", "mappings")`; ensure the directory exists on first use.
+  - `GetAvailableLayouts()`: scan both app's `mappings/` and user dir; merge stems with **user dir winning** on collision. Return sorted alphabetically.
+  - `Load(string layoutName)`: check user dir first, fall back to app dir; throw if not found in either. (Already correct behavior — user override shadows built-in.)
+  - New `Save(string name, KeyboardMappingDto dto)`: validate `name` (via `LayoutNameValidator`), serialize with `JsonSerializerOptions { WriteIndented = true }` to `{UserMappingsDirectory}/{name}.json`.
+  - New `LayoutsChanged` event raised after `Save`, so `SettingsPanel` can refresh `ItemsSource`.
+- `src/Klavier.UI/Input/Mapping/LayoutNameValidator.cs` (new):
+  - `TryValidate(string? name, out string? reason)`: rejects null/whitespace and path separators / OS-reserved chars (`Path.GetInvalidFileNameChars`). Built-in stems are permitted (they become user overrides).
+  - Used by both `KeyboardMappingProvider.Save` and the naming dialog (for live error feedback).
+
+### Step 2 - Editor window
+
+New directory: `src/Klavier.UI/Views/KeybindsEditor/`.
+
+- `KeybindsEditorWindow.cs`:
+  - Constructor params: `KeyboardMapping cloneSource`, `string? existingLayoutName` (null = Create, non-null = Edit), `KeyboardMappingProvider provider`.
+  - Sized ~800×500. Theming via `ThemePaletteProvider`.
+  - **Header**: `Modifier for black keys:` label + ComboBox (`Shift` / `Ctrl` / `Alt`), defaulting to `cloneSource.BlackKeyModifier`.
+  - **Piano view**: reuse/adapt `PianoView` to render C2-C7. Note-label display forced on (user needs to know which piano key is the target regardless of their normal display setting). The note-label rendering respects `UIConfig.NoteNameStyle` (Anglo-Saxon vs. Solfege) just like the main piano — the editor must never hardcode `C2`-style names regardless of user locale. Non-interactive for input; highlights the current target key using the existing `UserPalette.WhiteKeyPressed` / `UserPalette.BlackKeyPressed` brushes (visually identical to a real press, keeps the editor consistent with the main piano).
+  - **Status strip below piano**:
+    - Large text: `"Bind <NoteName>"` where `<NoteName>` is rendered via the same note-name formatter the main piano uses, honoring `UIConfig.NoteNameStyle` (so a French user with Solfege sees `"Bind Do2"`, an Anglo user sees `"Bind C2"`).
+    - Sub-line: `"Pressed: <label>"` when a binding was just captured, otherwise `"Press a PC key"`.
+    - Inline warning area (red text) for reserved-key and wrong-modifier warnings.
+  - **PC keyboard schema (read-only, below the status strip)**: a visual representation of a standard PC keyboard showing only the keys that are valid binding targets (letters A-Z, digits 0-9, standard punctuation, plus the modifier key highlighted as the layout's `blackKeyModifier`). Each key displays the note name of its current binding, formatted through the same style-aware note-name formatter used by the piano view. When a `PhysicalKey` has both a white and a black binding, show them stacked (white on top, black below — separator deferred to impl, `/` is a placeholder). Unbound keys are rendered empty. The schema updates live as the user makes changes during the wizard and is never interactive — it's pure feedback so the user can see at a glance which PC keys are free and which are taken. The currently-used modifier label is visually emphasized (e.g., a subtle accent border on the `Shift` block when modifier = Shift). Layout of the rendered keyboard keys uses Avalonia `PhysicalKey` geometry (US ANSI main block) regardless of the OS keyboard layout, since bindings are indexed by `PhysicalKey` — the on-key labels reflect what the user actually pressed (their `KeySymbol`), so AZERTY users see "A" on the physical-Q key.
+  - **Shared note-name formatter**: the same helper the main `PianoView` uses to convert `NotePitch` → displayed string must be reused here. If it's currently inlined in `PianoView`, extract it to a static helper in `src/Klavier.UI/Views/Piano/` (or `src/Klavier.Core/` if non-UI) so both views call the same code path.
+  - **Buttons row**: `[Back]` (disabled at index 0) / `[Skip]` (advances, keeps existing clone binding for this piano key) / `[Save]`.
+  - **Key capture** (`OnKeyDown`):
+    - `Escape` → close; if dirty, small confirm dialog "Discard changes?".
+    - `Space` → show warning; do not bind.
+    - Other presses: resolve based on current target:
+      - **White piano key target**: require no modifier held. If modifier present → warn "White keys must be pressed plain". Else, write entry `(PhysicalKey, label)` to in-memory `whiteKeys`. Label derivation: `KeySymbol` if non-empty, else `PhysicalKey.ToString()` (handles keys like F1 with no KeySymbol). If the resulting label is a single latin letter (a-z or A-Z), normalize to upper-case so stored labels match existing built-ins ("Q", "A", ...). Non-letter labels (digits, punctuation, non-latin characters) are stored as captured.
+      - **Black piano key target**: require exactly the configured `blackKeyModifier` held (no extras). Wrong / missing / extra → warn. Else, write entry to in-memory `blackKeys` using the same label rules. Note: Shift+letter already yields an upper-case `KeySymbol` on most layouts, but the upper-case normalization is applied uniformly regardless.
+    - On valid press: if the `PhysicalKey` was already bound elsewhere in this session, remove that prior entry and flash a warning ("T was bound to C2; moved to D2"). Advance to next piano key.
+  - On modifier-dropdown change: if user already bound some black keys, show a confirm dialog "Changing modifier will clear N bindings." Clear `blackKeys` on confirm, revert dropdown on cancel.
+
+- `NameLayoutDialog.cs` (new, same dir): small modal child window with a single TextBox + `[Save]` / `[Cancel]`. Live-validates via `LayoutNameValidator`; disables `[Save]` while invalid. On Save-to-existing-custom, shows confirm-overwrite inline.
+
+### Step 3 - Settings panel layout row
+
+- `src/Klavier.UI/Views/Settings/SettingsPanel.cs`:
+  - Today (line 200): `CreateRow(_KeyboardLayoutLabel, keyboardLayoutCombo)`.
+  - Wrap the ComboBox + a `[+]` button (create) + a `[Edit]` button into a horizontal `DockPanel`. Use existing iconic button style (similar to `soundFontPickerButton` in `SoundFont` row). Both buttons are always visible — any layout (built-in or custom) can be edited, because editing writes to the user dir and shadows the built-in.
+  - `[+]` button click: open `KeybindsEditorWindow` with `cloneSource = current loaded mapping`, `existingLayoutName = null`. Save dialog starts with an empty name field.
+  - `[Edit]` button click: open `KeybindsEditorWindow` with `cloneSource = current loaded mapping`, `existingLayoutName = current`. Save dialog pre-fills the name field with the current layout's name (keeping it as-is will overwrite or create the user override; changing it will create a new layout).
+- `src/Klavier.UI/Views/Settings/SettingsPanel.Helpers.cs`:
+  - New `CreateLayoutRow(string label, ComboBox combo, Border createBtn, Border editBtn) -> DockPanel` helper.
+  - New `CreateIconButton(Geometry icon, string tooltip) -> Border` if one doesn't already exist (see `CreateSoundFontPickerButton` - may already fit).
+
+### Step 4 - Save & hot-reload
+
+- Editor `[Save]` button:
+  1. Open `NameLayoutDialog` (prefilled with `existingLayoutName` if editing).
+  2. On dialog confirm: `provider.Save(name, dto)` writes file; raises `LayoutsChanged`.
+  3. Set `UIConfig.KeyboardLayout = name` via `_settingsService.UpdateSetting(ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)), name)` - triggers existing `UIConfig.OnChange` pipeline; `KeyboardInputHandler` reloads the mapping automatically.
+  4. Close editor.
+- `SettingsPanel` subscribes to `KeyboardMappingProvider.LayoutsChanged` and refreshes `keyboardLayoutCombo.ItemsSource` on the UI thread.
+- Edit flow (saving the currently active layout): hot-reload picks up the new bindings automatically via the same `UIConfig.OnChange` chain (the `KeyboardLayout` value hasn't changed but the file content did - may need explicit reload. Handled by also raising a `LayoutsChanged` → `SettingsPanel` forces `KeyboardInputHandler` reload via a deliberate re-write of the same `UIConfig.KeyboardLayout` value, OR by exposing a reload method on `KeyboardInputHandler`. Choice deferred to impl time; simpler of the two wins.).
+
+### Step 5 - Edge cases & polish
+
+- **No KeySymbol**: for physical keys without a character (F1, arrows, etc.), fallback label is `PhysicalKey.ToString()`. Acceptable for v1; users can see what they pressed.
+- **Rename via Save As**: if editing and the user changes the name in the save dialog, a new file is written; old file stays (no Delete this iteration). Matches the "No Delete" decision.
+- **Missing active layout at startup**: if `UIConfig.KeyboardLayout` references a file that no longer exists, `KeyboardMappingProvider.Load` currently throws. Deferred: graceful fallback to first available layout + log a warning. Not in scope for this iteration unless trivial.
+
+### Verification
+
+1. Click `[+]` next to the layout dropdown. Editor opens; first piano key (C2) is highlighted; current clone's binding for C2 shows in the status strip.
+2. Change modifier dropdown from Shift to Ctrl on an unsaved new layout → OK, no confirm (no black bindings yet).
+3. Press a plain PC key (e.g., Q) while C2 highlighted → binding captured; label = KeySymbol; advances to C#2.
+4. On C#2 (black), press Ctrl+W → binding captured in `blackKeys`.
+5. On C#2 (black), press Shift+W instead → warning "Black keys require Ctrl"; no binding.
+6. Later, on D2, press Q again → warning "Q was bound to C2; moved to D2"; C2 in-memory binding cleared.
+7. Press Space on any target → warning "Space is reserved for sustain"; no binding; no advance.
+8. Press Escape → editor closes (confirm prompt since dirty).
+9. Click Save → naming dialog opens. Type a name with invalid chars (e.g., `foo/bar`) → inline error. Type "mine" → Save enabled. Confirm. `%LocalAppData%/Klavier/mappings/mine.json` exists with matching DTO. Dropdown refreshes. `UI:KeyboardLayout = "mine"` in `usersettings.json`. Piano plays with new bindings without restart.
+10. Select "qwerty" in the dropdown, click `[Edit]`, tweak a key, click Save → dialog pre-filled with "qwerty"; confirm as-is → user override `%LocalAppData%/Klavier/mappings/qwerty.json` written. `GetAvailableLayouts()` still returns "qwerty" only once. Playback uses the new bindings immediately.
+11. Delete `%LocalAppData%/Klavier/mappings/qwerty.json` from disk → on next launch, built-in qwerty is active again (no ghost override).
+12. Click `[Edit]` while "mine" is selected → editor opens pre-filled; header modifier matches saved; tweak one key; Save → overwrites user-dir file in place; live playback updates.
+13. Remove `mine.json` from disk manually, relaunch app → dropdown no longer lists "mine". If it was the active layout, app logs a warning and falls back to the first available (deferred - graceful handling flagged above).
+14. Regression: both `[+]` and `[Edit]` buttons are visible for every layout; QWERTY / AZERTY / Dvorak-FR still work identically when no user override exists.
 
 ### Key files to modify/create
-- `src/Klavier.UI/Views/KeybindWindow.cs` — new, separate window for mapping
-- `src/Klavier.UI/Input/KeyboardMappingProvider.cs` — support multiple presets + custom
-- `src/Klavier.UI/Options/` — keybind config persistence
-- `src/Klavier.UI/Views/SettingsBarView.cs` — button to open keybind window
+
+- `src/Klavier.UI/Input/Mapping/KeyboardMappingProvider.cs` - two-location scan with user-dir precedence, `Save`, `LayoutsChanged` event
+- `src/Klavier.UI/Input/Mapping/LayoutNameValidator.cs` - new
+- `src/Klavier.UI/Views/KeybindsEditor/KeybindsEditorWindow.cs` - new wizard window
+- `src/Klavier.UI/Views/KeybindsEditor/NameLayoutDialog.cs` - new modal save dialog
+- `src/Klavier.UI/Views/Settings/SettingsPanel.cs` - wrap layout row with Create/Edit buttons; subscribe to `LayoutsChanged`
+- `src/Klavier.UI/Views/Settings/SettingsPanel.Helpers.cs` - `CreateLayoutRow` helper; possibly a reusable icon-button helper
 
 ---
 
-## Iteration 13: SharpHook (Background Keyboard Capture)
-
-**Goal:** Capture keyboard input even when Klavier is not the focused window.
-
-- **Mode:** Togglable — off by default. Setting in the settings bar or toolbar.
-- **Library:** SharpHook (chosen from earlier research). A second research/validation phase at implementation time to confirm compatibility and behavior on Windows.
-- **Architecture:** SharpHook hooks run on a background thread; events are marshaled to the existing `KeyboardInputHandler` pipeline.
-
-### Key files to modify/create
-- `src/Klavier.UI/Input/GlobalKeyboardHook.cs` — new, SharpHook integration
-- `src/Klavier.UI/Input/KeyboardInputHandler.cs` — accept events from both Avalonia and SharpHook
-- `src/Klavier.UI/Views/SettingsBarView.cs` — toggle for background capture
-- `src/Klavier.UI/ServiceCollectionExtensions.cs` — register hook service
-- NuGet: add SharpHook package
-
----
-
-## Iteration 14+ (Backlog)
+## Iteration 13+ (Backlog)
 
 These items are deferred — no detailed design yet.
 
 - **MIDI Input** — Connect external MIDI keyboards/controllers
 - **MIDI Recording (Output)** — Record played notes to a MIDI file
 - **Sustain Half-Pedal** — Continuous CC64 value range instead of on/off
-- **Result\<T\> pattern for KeyboardMappingProvider** — Error handling improvement
+- **88 keys piano** — Support a wider piano variant
+- **Sharphook** — Capture keyboard input even when Klavier is not the focused window.
 
 ---
 
