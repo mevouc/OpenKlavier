@@ -21,6 +21,7 @@
     <Project Path="src/Klavier.Audio/Klavier.Audio.csproj" />
     <Project Path="src/Klavier.Config/Klavier.Config.csproj" />
     <Project Path="src/Klavier.Core/Klavier.Core.csproj" />
+    <Project Path="src/Klavier.Midi/Klavier.Midi.csproj" />
     <Project Path="src/Klavier.SoundFont/Klavier.SoundFont.csproj" />
     <Project Path="src/Klavier.UI/Klavier.UI.csproj" />
     <Project Path="src/Klavier/Klavier.csproj" />

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Melanchall.DryWetMidi" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Klavier.Core\Klavier.Core.csproj" />
+    <ProjectReference Include="..\Klavier.Config\Klavier.Config.csproj" />
+  </ItemGroup>
+</Project>
