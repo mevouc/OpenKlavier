@@ -7,9 +7,6 @@ namespace Klavier.UI.ViewModels;
 
 public static class PianoKeysBuilder
 {
-    public const ushort FirstPitch = 36;   // C2
-    public const ushort LastPitch = 96;    // C7
-
     public static List<PianoKeyViewModel> Build(
         IPianoEngine pianoEngine,
         IReadOnlyDictionary<NotePitch, string> keyLabels,
@@ -20,7 +17,7 @@ public static class PianoKeysBuilder
     {
         List<PianoKeyViewModel> keys = [];
 
-        for (ushort pitch = FirstPitch; pitch <= LastPitch; pitch++)
+        for (ushort pitch = PianoRange.FirstPitch; pitch <= PianoRange.LastPitch; pitch++)
         {
             NotePitch keyPitch = new(pitch);
             NotePitch soundingPitch = keyPitch.Transpose(transpose);

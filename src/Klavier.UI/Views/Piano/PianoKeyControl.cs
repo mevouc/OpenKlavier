@@ -16,6 +16,8 @@ public class PianoKeyControl : Border
 
     public event EventHandler<NotePitch>? KeyClicked;
 
+    public NotePitch Pitch => _viewModel.Pitch;
+
     private static readonly SolidColorBrush _WhiteKeyBrush = new(UserPalette.WhiteKey);
     private static readonly SolidColorBrush _WhiteKeyPressedBrush = new(UserPalette.WhiteKeyPressed);
     private static readonly SolidColorBrush _BlackKeyBrush = new(UserPalette.BlackKey);
