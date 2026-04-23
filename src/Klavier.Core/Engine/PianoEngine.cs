@@ -14,9 +14,11 @@ public class PianoEngine : IPianoEngine
     private PianoConfig _lastPianoConfig;
     private readonly Dictionary<NotePitch, int> _activeNotes = []; // value is active inputs count (note plays when there's at least one)
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
-    private bool _isSustainOn;
+    private bool _userSustainOn;
+    private bool _playerSustainOn;
+    private bool _isSustainOn => _userSustainOn || _playerSustainOn;
 
-    public bool IsSustainOn => _isSustainOn;
+    public event Action? PanicRaised;
 
     public PianoEngine(
         IOptionsMonitor<PianoConfig> playbackConfig,
@@ -34,11 +36,11 @@ public class PianoEngine : IPianoEngine
         _noteEventHandlers.Add(noteEventHandler);
     }
 
-    public void NoteOn(NotePitch keyPitch)
+    public void NoteOn(NotePitch keyPitch, NoteVelocity? velocity = null)
     {
-        NoteVelocity velocity = new(_playbackConfig.CurrentValue.Velocity);
+        NoteVelocity effectiveVelocity = velocity ?? new NoteVelocity(_playbackConfig.CurrentValue.Velocity);
 
-        if (velocity.Value == 0) // MIDI spec: velocity 0 = note-off
+        if (effectiveVelocity.Value == 0) // MIDI spec: velocity 0 = note-off
         {
             NoteOff(keyPitch);
             return;
@@ -48,7 +50,7 @@ public class PianoEngine : IPianoEngine
 
         if (_activeNotes.TryAdd(soundingPitch, 1))
         {
-            NoteOnEvent noteOnEvent = new(keyPitch, soundingPitch, velocity);
+            NoteOnEvent noteOnEvent = new(keyPitch, soundingPitch, effectiveVelocity);
 
             _logger.LogInformation("Playing note {SoundingPitch}", soundingPitch);
 
@@ -81,46 +83,68 @@ public class PianoEngine : IPianoEngine
         }
     }
 
-    public void SustainOn()
+    public void SustainOn(InputSource source = InputSource.User)
     {
-        if (_isSustainOn)
+        bool wasOn = _isSustainOn;
+        switch (source)
         {
-            return;
+            case InputSource.User:
+                _userSustainOn = true;
+                break;
+            case InputSource.Playback:
+                _playerSustainOn = true;
+                break;
         }
-
-        _isSustainOn = true;
-        _logger.LogInformation("Sustain on");
-        NotifyHandlers(handler => handler.OnSustainChanged(true));
+        if (!wasOn && _isSustainOn)
+        {
+            _logger.LogInformation("Sustain on (triggered by {Source})", source);
+            NotifyHandlers(handler => handler.OnSustainChanged(true));
+        }
     }
 
-    public void SustainOff()
+    public void SustainOff(InputSource source = InputSource.User)
     {
-        if (!_isSustainOn)
+        bool wasOn = _isSustainOn;
+        switch (source)
         {
-            return;
+            case InputSource.User:
+                _userSustainOn = false;
+                break;
+            case InputSource.Playback:
+                _playerSustainOn = false;
+                break;
         }
-
-        _isSustainOn = false;
-        _logger.LogInformation("Sustain off");
-        NotifyHandlers(handler => handler.OnSustainChanged(false));
+        if (wasOn && !_isSustainOn)
+        {
+            _logger.LogInformation("Sustain off (triggered by {Source})", source);
+            NotifyHandlers(handler => handler.OnSustainChanged(false));
+        }
     }
 
-    public void ToggleSustain()
+    public void ToggleSustain(InputSource source = InputSource.User)
     {
-        if (_isSustainOn)
+        bool isSourceOn = source switch
         {
-            SustainOff();
+            InputSource.User => _userSustainOn,
+            InputSource.Playback => _playerSustainOn,
+            _ => false,
+        };
+        if (isSourceOn)
+        {
+            SustainOff(source);
         }
         else
         {
-            SustainOn();
+            SustainOn(source);
         }
     }
 
     public void Panic()
     {
-        SustainOff();
+        SustainOff(InputSource.User);
+        SustainOff(InputSource.Playback);
         AllNotesOff();
+        PanicRaised?.Invoke();
     }
 
     private void AllNotesOff()

@@ -8,11 +8,9 @@ namespace Klavier.Audio;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddFluidSynthAudio(
-        this IServiceCollection services,
-        IConfigurationSection audioSection)
+    public static IServiceCollection AddFluidSynthAudio(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<AudioConfig>(audioSection);
+        services.Configure<AudioConfig>(configuration.GetSection(AudioConfig.SectionName));
 
         services.AddSingleton<FluidSynthAudioOutput>();
         services.AddSingleton<IAudioOutput>(sp => sp.GetRequiredService<FluidSynthAudioOutput>());

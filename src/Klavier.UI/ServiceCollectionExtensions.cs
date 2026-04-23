@@ -15,11 +15,9 @@ namespace Klavier.UI;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddKlavierUI(
-        this IServiceCollection services,
-        IConfigurationSection uiSection)
+    public static IServiceCollection AddUI(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<UIConfig>(uiSection);
+        services.Configure<UIConfig>(configuration.GetSection(UIConfig.SectionName));
 
         services.AddSingleton<PianoViewModel>();
         services.AddSingleton<KeyboardInputHandler>();

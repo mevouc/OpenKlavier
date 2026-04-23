@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Klavier.Core\Klavier.Core.csproj" />
     <ProjectReference Include="..\Klavier.Config\Klavier.Config.csproj" />
+    <ProjectReference Include="..\Klavier.Midi\Klavier.Midi.csproj" />
     <ProjectReference Include="..\Klavier.SoundFont\Klavier.SoundFont.csproj" />
   </ItemGroup>
 
