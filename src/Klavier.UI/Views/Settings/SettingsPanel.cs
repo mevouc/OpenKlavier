@@ -112,8 +112,8 @@ public partial class SettingsPanel : Border
         ComboBox keyboardLayoutCombo = CreateComboBox(
             KeyboardMappingProvider.GetAvailableLayouts(),
             ui.KeyboardLayout);
-        PathIconButton createLayoutButton = CreatePlusIconButton();
-        PathIconButton editLayoutButton = CreatePencilIconButton();
+        IconButton createLayoutButton = CreatePlusIconButton();
+        IconButton editLayoutButton = CreatePencilIconButton();
         StackPanel keyboardLayoutRow = new()
         {
             Orientation = Orientation.Horizontal,
@@ -128,7 +128,7 @@ public partial class SettingsPanel : Border
 
         (string soundFontDisplay, string? soundFontTooltip) = GetSoundFontDisplayName(soundFontInfo.Name, audio.SoundFont.Path);
         TextBox soundFontPathDisplay = CreateSoundFontPathDisplay(soundFontDisplay, soundFontTooltip);
-        PathIconButton soundFontPickerButton = CreateSoundFontPickerButton();
+        IconButton soundFontPickerButton = CreateSoundFontPickerButton();
         Border soundFontPickerControl = CreateSoundFontPickerControl(soundFontPathDisplay, soundFontPickerButton);
 
         TextBox accentHexTextBox = CreateHexColorTextBox(UserPalette.Accent);
@@ -210,7 +210,7 @@ public partial class SettingsPanel : Border
         });
 
         // Wire reset
-        KlavierButton resetButton = new(_ResetDefaultsButtonLabel);
+        TextButton resetButton = new(_ResetDefaultsButtonLabel);
         resetButton.PointerPressed += (_, e) =>
         {
             _settingsService.ResetAll();

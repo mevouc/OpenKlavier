@@ -60,7 +60,7 @@ public partial class SettingsPanel
         return row;
     }
 
-    private static DockPanel CreateResetRow(KlavierButton button)
+    private static DockPanel CreateResetRow(TextButton button)
     {
         button.HorizontalAlignment = HorizontalAlignment.Right;
         button.Margin = new Thickness(0, 4, 0, 0);
@@ -149,10 +149,10 @@ public partial class SettingsPanel
         };
     }
 
-    private static KlavierComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
+    private static CustomComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
         => CreateComboBox(Enum.GetValues<TEnum>(), selectedValue);
 
-    private static KlavierComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue) => new()
+    private static CustomComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue) => new()
     {
         ItemsSource = items,
         SelectedItem = selectedValue,
@@ -262,50 +262,55 @@ public partial class SettingsPanel
         return textBox;
     }
 
-    private static PathIconButton CreateSoundFontPickerButton()
+    private static IconButton CreateSoundFontPickerButton()
     {
         // Folder glyph (Material Icons "folder", 24x24 viewport).
         Geometry folderGeometry = Geometry.Parse(
             "M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z");
-        return new PathIconButton(folderGeometry, iconSize: 14)
+        return new IconButton(folderGeometry, iconSize: 14)
         {
             VerticalAlignment = VerticalAlignment.Stretch,
         };
     }
 
-    private static PathIconButton CreatePlusIconButton()
+    private static IconButton CreatePlusIconButton()
     {
         // Plus glyph (Material Icons "plus", 24x24 viewport).
         Geometry plusGeometry = Geometry.Parse(
             "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z");
-        return new PathIconButton(plusGeometry, iconSize: 14)
+        return new IconButton(plusGeometry, iconSize: 14)
         {
             VerticalAlignment = VerticalAlignment.Stretch,
         };
     }
 
-    private static PathIconButton CreatePencilIconButton()
+    private static IconButton CreatePencilIconButton()
     {
         // Pencil glyph (Material Icons "pencil", 24x24 viewport).
         Geometry pencilGeometry = Geometry.Parse(
             "M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z");
-        return new PathIconButton(pencilGeometry, iconSize: 14)
+        return new IconButton(pencilGeometry, iconSize: 14)
         {
             VerticalAlignment = VerticalAlignment.Stretch,
         };
     }
 
     private void WireKeybindsEditorButton(
-        PathIconButton button,
+        IconButton button,
         IOptionsMonitor<UIConfig> uiConfig,
         bool useCurrentLayoutName)
     {
         button.PointerPressed += async (_, e) =>
         {
             e.Handled = true;
-            button.IsActive = true;
-            await OpenKeybindsEditor(uiConfig, useCurrentLayoutName);
-            button.IsActive = false;
+            try
+            {
+                await OpenKeybindsEditor(uiConfig, useCurrentLayoutName);
+            }
+            finally
+            {
+                button.IsActive = false;
+            }
         };
     }
 
@@ -356,18 +361,23 @@ public partial class SettingsPanel
         return (Display: Path.GetFileName(filePath), Tooltip: null);
     }
 
-    private void WireSoundFontPicker(PathIconButton pickerButton, IOptionsMonitor<AudioConfig> audioConfig)
+    private void WireSoundFontPicker(IconButton pickerButton, IOptionsMonitor<AudioConfig> audioConfig)
     {
         pickerButton.PointerPressed += async (_, e) =>
         {
             e.Handled = true;
-            pickerButton.IsActive = true;
-            await HandleSoundFontPicker(pickerButton, audioConfig);
-            pickerButton.IsActive = false;
+            try
+            {
+                await HandleSoundFontPicker(pickerButton, audioConfig);
+            }
+            finally
+            {
+                pickerButton.IsActive = false;
+            }
         };
     }
 
-    private async Task HandleSoundFontPicker(PathIconButton pickerButton, IOptionsMonitor<AudioConfig> audioConfig)
+    private async Task HandleSoundFontPicker(IconButton pickerButton, IOptionsMonitor<AudioConfig> audioConfig)
     {
         TopLevel? topLevel = TopLevel.GetTopLevel(pickerButton);
         if (topLevel is null)

@@ -28,8 +28,8 @@ public class NameLayoutDialog : Window
 
     private readonly TextBox _nameBox;
     private readonly TextBlock _feedbackText;
-    private readonly KlavierButton _saveButton;
-    private readonly KlavierButton _cancelButton;
+    private readonly TextButton _saveButton;
+    private readonly TextButton _cancelButton;
 
     /// <summary>
     /// The confirmed layout name after the dialog closes, or null if the user cancelled.
@@ -61,14 +61,14 @@ public class NameLayoutDialog : Window
             Margin = new Thickness(0, _ControlSpacing, 0, _ControlSpacing),
         };
 
-        _saveButton = new KlavierButton(_SaveButtonLabel);
+        _saveButton = new TextButton(_SaveButtonLabel);
         _saveButton.PointerPressed += (_, e) =>
         {
             Confirm();
             e.Handled = true;
         };
 
-        _cancelButton = new KlavierButton(_CancelButtonLabel);
+        _cancelButton = new TextButton(_CancelButtonLabel);
         _cancelButton.PointerPressed += (_, e) =>
         {
             Close();

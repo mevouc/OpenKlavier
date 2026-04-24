@@ -21,7 +21,7 @@ public class ToolbarView : Border
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(8, 4);
 
-        KlavierButton panicButton = new("Panic");
+        TextButton panicButton = new("Panic");
         panicButton.PointerPressed += (_, e) =>
         {
             pianoEngine.Panic();
@@ -32,7 +32,7 @@ public class ToolbarView : Border
             e.Handled = true;
         };
 
-        KlavierButton settingsButton = new("Settings", momentaryActiveOnPress: false) { Margin = new Thickness(4, 0, 0, 0) };
+        TextButton settingsButton = new("Settings", momentaryActiveOnPress: false) { Margin = new Thickness(4, 0, 0, 0) };
         settingsButton.PointerPressed += (_, e) =>
         {
             _isSettingsOpen = !_isSettingsOpen;

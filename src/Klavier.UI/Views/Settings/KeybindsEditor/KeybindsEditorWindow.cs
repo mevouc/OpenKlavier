@@ -45,9 +45,9 @@ public class KeybindsEditorWindow : Window
     private readonly IUserSettingsService _settingsService;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly TextBlock _statusText;
-    private readonly KlavierComboBox _modifierCombo;
+    private readonly CustomComboBox _modifierCombo;
     private readonly Viewbox _schemaViewbox;
-    private readonly KlavierButton _saveButton;
+    private readonly TextButton _saveButton;
     private readonly NoteNameStyle _noteNameStyle;
 
     private NotePitch? _pendingTarget;
@@ -266,7 +266,7 @@ public class KeybindsEditorWindow : Window
         };
     }
 
-    private KlavierComboBox BuildModifierCombo() => new()
+    private CustomComboBox BuildModifierCombo() => new()
     {
         ItemsSource = KeyModifierOptions.AllLabels,
         SelectedItem = KeyModifierOptions.LabelOf(_session.BlackKeyModifier),
@@ -295,7 +295,7 @@ public class KeybindsEditorWindow : Window
 
     private StackPanel BuildButtonsRow()
     {
-        KlavierButton cancelButton = new(_CancelButtonLabel);
+        TextButton cancelButton = new(_CancelButtonLabel);
         cancelButton.PointerPressed += (_, e) =>
         {
             Close();
@@ -311,9 +311,9 @@ public class KeybindsEditorWindow : Window
         };
     }
 
-    private KlavierButton BuildSaveButton()
+    private TextButton BuildSaveButton()
     {
-        KlavierButton button = new(_SaveButtonLabel) { IsEnabled = false };
+        TextButton button = new(_SaveButtonLabel) { IsEnabled = false };
         button.PointerPressed += async (_, e) =>
         {
             e.Handled = true;
