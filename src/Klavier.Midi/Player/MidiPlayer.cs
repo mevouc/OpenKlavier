@@ -1,11 +1,13 @@
 using System.Diagnostics;
+using Klavier.Config;
 using Klavier.Core.Events;
 using Klavier.Midi.Player.Timeline;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Klavier.Midi.Player;
 
-public class MidiPlayer(ILogger<MidiPlayer> logger) : IMidiPlayer, IDisposable
+public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer> logger) : IMidiPlayer, IDisposable
 {
     private const int _TickIntervalMs = 16;
     private const double _MinTempoMultiplier = 0.25;
@@ -19,7 +21,7 @@ public class MidiPlayer(ILogger<MidiPlayer> logger) : IMidiPlayer, IDisposable
     private List<TimelineEvent> _timeline = [];
     private int _timelineIndex;
     private TimeSpan _position;
-    private double _tempoMultiplier = 1.0;
+    private double _tempoMultiplier = Math.Clamp(playerConfig.Value.TempoMultiplier, _MinTempoMultiplier, _MaxTempoMultiplier);
     private Timer? _timer;
 
     public MidiPlayerState State => _state;
@@ -32,7 +34,7 @@ public class MidiPlayer(ILogger<MidiPlayer> logger) : IMidiPlayer, IDisposable
         set => _tempoMultiplier = Math.Clamp(value, _MinTempoMultiplier, _MaxTempoMultiplier);
     }
 
-    public bool AudioEnabled { get; set; } = true;
+    public bool AudioEnabled { get; set; } = playerConfig.Value.AudioEnabled;
 
     public event Action<MidiScore>? Loaded;
     public event Action? Started;

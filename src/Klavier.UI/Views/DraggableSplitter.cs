@@ -82,6 +82,20 @@ public class DraggableSplitter
         }
     }
 
+    /// <summary>
+    /// Configures the splitter to sit across the bottom boundary of its current row, resizing
+    /// the current and next rows. The visible line centers on the edge rather than taking its own space.
+    /// </summary>
+    public void StraddleBottomBoundary()
+    {
+        Thickness straddleMargin = new(0, 0, 0, -HitArea.Height / 2);
+        HitArea.VerticalAlignment = VerticalAlignment.Bottom;
+        HitArea.ResizeBehavior = GridResizeBehavior.CurrentAndNext;
+        HitArea.Margin = straddleMargin;
+        Visual.VerticalAlignment = VerticalAlignment.Bottom;
+        Visual.Margin = straddleMargin;
+    }
+
     private void SetHoverState(bool hover)
     {
         SolidColorBrush brush = hover ? _HoverBrush : _DefaultBrush;

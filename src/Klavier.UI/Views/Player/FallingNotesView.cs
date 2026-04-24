@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Klavier.Config;
+using Klavier.Core.Primitives;
 using Klavier.Midi;
 using Klavier.Midi.Player;
 using Klavier.UI.Theme;
@@ -34,15 +35,17 @@ public class FallingNotesView : Control
 
     public override void Render(DrawingContext context)
     {
-        MidiScore? score = _player.CurrentScore;
-        if (score is null)
+        double panelWidth = Bounds.Width;
+        double panelHeight = Bounds.Height;
+        if (panelWidth <= 0 || panelHeight <= 0)
         {
             return;
         }
 
-        double panelWidth = Bounds.Width;
-        double panelHeight = Bounds.Height;
-        if (panelWidth <= 0 || panelHeight <= 0)
+        DrawColumnHints(context, panelWidth, panelHeight);
+
+        MidiScore? score = _player.CurrentScore;
+        if (score is null)
         {
             return;
         }
@@ -78,6 +81,30 @@ public class FallingNotesView : Control
 
             Rect rect = new(x, barTopY, width, height);
             context.DrawRectangle(_NotesColorBrush, null, rect, Constants.CornerRadius, Constants.CornerRadius);
+        }
+    }
+
+    private static void DrawColumnHints(DrawingContext context, double panelWidth, double panelHeight)
+    {
+        IBrush dividerBrush = new SolidColorBrush(ThemePaletteProvider.Divider);
+        Pen solidPen = new(dividerBrush, 1.0);
+        Pen dashPen = new(dividerBrush, 1.0, new DashStyle([5, 8], 0));
+
+        for (ushort p = PianoRange.FirstPitch; p <= PianoRange.LastPitch; p++)
+        {
+            NotePitch pitch = new(p);
+            double leftX = PianoKeyGeometry.GetColumnLeftX(pitch, panelWidth);
+            double width = PianoKeyGeometry.GetColumnWidth(pitch, panelWidth);
+
+            if (pitch.IsAccidental)
+            {
+                context.DrawLine(dashPen, new Point(leftX, 0), new Point(leftX, panelHeight));
+                context.DrawLine(dashPen, new Point(leftX + width, 0), new Point(leftX + width, panelHeight));
+            }
+            else if (leftX > 0)
+            {
+                context.DrawLine(solidPen, new Point(leftX, 0), new Point(leftX, panelHeight));
+            }
         }
     }
 }

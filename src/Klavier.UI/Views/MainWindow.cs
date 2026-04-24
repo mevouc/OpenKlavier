@@ -16,12 +16,15 @@ public class MainWindow : Window
 {
     private const string _WindowTitle = "Klavier";
     private const int _DefaultWidth = 1000;
-    private const int _DefaultHeight = 300;
+    private const int _DefaultHeight = 500;
     private const int _MinWidth = 700;
     private const int _MinHeight = 150;
     private const int _SettingsMinHeight = 150;
     private const int _SplitterHeight = 8;
     private const int _DefaultSettingsHeight = 300;
+    private const int _DefaultPianoHeight = 200;
+    private const int _PianoMinHeight = 100;
+    private const int _PlayerMinHeight = 80;
 
     private readonly KeyboardInputHandler _keyboardInput;
     private readonly SettingsPanel _settingsPanel;
@@ -50,15 +53,28 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
-        // Top section: player fixed at top, piano fills middle, separator + toolbar at bottom
+        // Top section: player (star) / piano (fixed) / separator / toolbar; splitter floats at the player-piano boundary
         Grid separator = CreatePianoSeparator();
-        DockPanel.SetDock(toolbarView, Dock.Bottom);
-        DockPanel.SetDock(separator, Dock.Bottom);
-        DockPanel.SetDock(playerView, Dock.Top);
+        DraggableSplitter pianoSplitter = new(_SplitterHeight) { IsVisible = true };
+        pianoSplitter.StraddleBottomBoundary();
 
-        DockPanel topSection = new()
+        Grid.SetRow(playerView, 0);
+        Grid.SetRow(pianoView, 1);
+        Grid.SetRow(separator, 2);
+        Grid.SetRow(toolbarView, 3);
+        Grid.SetRow(pianoSplitter.HitArea, 0);
+        Grid.SetRow(pianoSplitter.Visual, 0);
+
+        Grid topSection = new()
         {
-            Children = { toolbarView, separator, playerView, pianoView },
+            RowDefinitions =
+            {
+                new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = _PlayerMinHeight },
+                new RowDefinition { Height = new GridLength(_DefaultPianoHeight), MinHeight = _PianoMinHeight },
+                new RowDefinition { Height = GridLength.Auto },
+                new RowDefinition { Height = GridLength.Auto },
+            },
+            Children = { playerView, pianoView, separator, toolbarView, pianoSplitter.HitArea, pianoSplitter.Visual },
         };
 
         // Draggable splitter between top section and settings panel
