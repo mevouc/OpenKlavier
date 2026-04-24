@@ -8,6 +8,7 @@ using Klavier.Config;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
 using Klavier.UI.Views.Piano;
+using Klavier.UI.Views.Player;
 
 namespace Klavier.UI.Views;
 
@@ -30,6 +31,7 @@ public class MainWindow : Window
     public MainWindow(
         KeyboardInputHandler keyboardInput,
         PianoView pianoView,
+        PlayerView playerView,
         ToolbarView toolbarView,
         SettingsPanel settingsPanel,
         IOptionsMonitor<UIConfig> uiConfig)
@@ -48,14 +50,15 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
-        // Top section: piano + toolbar
+        // Top section: player fixed at top, piano fills middle, separator + toolbar at bottom
         Grid separator = CreatePianoSeparator();
         DockPanel.SetDock(toolbarView, Dock.Bottom);
         DockPanel.SetDock(separator, Dock.Bottom);
+        DockPanel.SetDock(playerView, Dock.Top);
 
         DockPanel topSection = new()
         {
-            Children = { toolbarView, separator, pianoView },
+            Children = { toolbarView, separator, playerView, pianoView },
         };
 
         // Draggable splitter between top section and settings panel

@@ -6,6 +6,7 @@ using Klavier.UI.Ports;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
 using Klavier.UI.Views.Piano;
+using Klavier.UI.Views.Player;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<PianoView>(sp => new PianoView(
             sp.GetRequiredService<PianoViewModel>().Keys,
             sp.GetRequiredService<SustainBarControl>()));
+        services.AddTransient<FallingNotesView>();
+        services.AddTransient<PlayerView>();
         services.AddTransient<ToolbarView>();
         services.AddTransient<SettingsPanel>();
         services.AddTransient<MainWindow>();
