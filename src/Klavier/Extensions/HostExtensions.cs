@@ -53,6 +53,34 @@ public static class HostExtensions
         return host;
     }
 
+    public static IHost AutoLoadMidi(this IHost host)
+    {
+        // Auto-load the MIDI file persisted in PlayerConfig.Path, if any
+        string path = host.Services.GetRequiredService<IOptions<PlayerConfig>>().Value.Path;
+        if (string.IsNullOrEmpty(path))
+        {
+            return host;
+        }
+
+        IMidiScoreLoader loader = host.Services.GetRequiredService<IMidiScoreLoader>();
+        IMidiPlayer player = host.Services.GetRequiredService<IMidiPlayer>();
+        ILogger logger = host.Services
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(nameof(HostExtensions));
+
+        try
+        {
+            MidiScore score = loader.LoadAsync(path).GetAwaiter().GetResult();
+            player.Load(score);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to auto-load MIDI file {Path}", path);
+        }
+
+        return host;
+    }
+
     public static IHost ApplyColorTheme(this IHost host)
     {
         // Set active theme and load user colors before any views are created

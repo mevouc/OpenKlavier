@@ -99,7 +99,10 @@ public class FilePathPicker : Border
     {
         string? prettyName = _getPrettyName?.Invoke();
         _pathDisplay.Text = ComputeDisplayName(prettyName, path);
-        ToolTip.SetTip(_pathDisplay, path);
+        if (!string.IsNullOrEmpty(path))
+        {
+            ToolTip.SetTip(_pathDisplay, path);
+        }
     }
 
     private static string ComputeDisplayName(string? prettyName, string filePath)

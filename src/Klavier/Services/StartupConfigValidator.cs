@@ -19,6 +19,7 @@ public static class StartupConfigValidator
     {
         ValidateKeyboardLayout(services, logger);
         ValidateSoundFontPath(services, logger);
+        ValidateMidiPath(services, logger);
     }
 
     private static void ValidateKeyboardLayout(IServiceProvider services, ILogger logger)
@@ -44,21 +45,43 @@ public static class StartupConfigValidator
     private static void ValidateSoundFontPath(IServiceProvider services, ILogger logger)
     {
         IOptions<AudioConfig> audioConfig = services.GetRequiredService<IOptions<AudioConfig>>();
-        IUserSettingsService settings = services.GetRequiredService<IUserSettingsService>();
+        HealMissingFilePath(
+            audioConfig.Value.SoundFont.Path,
+            "SoundFont",
+            ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Path)),
+            services,
+            logger);
+    }
 
-        string requested = audioConfig.Value.SoundFont.Path;
-        if (File.Exists(requested))
+    private static void ValidateMidiPath(IServiceProvider services, ILogger logger)
+    {
+        IOptions<PlayerConfig> playerConfig = services.GetRequiredService<IOptions<PlayerConfig>>();
+        HealMissingFilePath(
+            playerConfig.Value.Path,
+            "MIDI",
+            ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.Path)),
+            services,
+            logger);
+    }
+
+    private static void HealMissingFilePath(
+        string path,
+        string fileLabel,
+        string settingKey,
+        IServiceProvider services,
+        ILogger logger)
+    {
+        if (string.IsNullOrEmpty(path) || File.Exists(path))
         {
             return;
         }
 
         logger.LogWarning(
-            "SoundFont file '{Requested}' not found. Clearing user override, falling back to appsettings.json default.",
-            requested);
+            "{Label} file '{Requested}' not found. Clearing user override, falling back to appsettings.json default.",
+            fileLabel,
+            path);
 
-        settings.ClearSetting(ConfigKey.Of(
-            AudioConfig.SectionName,
-            nameof(AudioConfig.SoundFont),
-            nameof(Config.SoundFontConfig.Path)));
+        IUserSettingsService settings = services.GetRequiredService<IUserSettingsService>();
+        settings.ClearSetting(settingKey);
     }
 }

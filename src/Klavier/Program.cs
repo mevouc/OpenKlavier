@@ -12,6 +12,7 @@ IHost host = Host.CreateDefaultBuilder(args)
 host.EnsureValidUserSettings()
     .InitializePianoPipeline()
     .InitializeMidiPlaybackCoordinator()
+    .AutoLoadMidi()
     .ApplyColorTheme();
 
 return host.RunAvaloniaApp(args);
