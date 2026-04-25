@@ -69,21 +69,10 @@ public static class HostExtensions
 
     public static int RunAvaloniaApp(this IHost host, string[] args)
     {
-        // TEMP smoke-test: autoload westworld.mid from Desktop and start playing.
-        // Remove once Step 7 (drag-drop / file picker) lands.
-        string testMidiPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            "westworld.mid");
-        IMidiScoreLoader midiLoader = host.Services.GetRequiredService<IMidiScoreLoader>();
-        IMidiPlayer midiPlayer = host.Services.GetRequiredService<IMidiPlayer>();
-        MidiScore testScore = midiLoader.LoadAsync(testMidiPath).GetAwaiter().GetResult();
-        midiPlayer.Load(testScore);
-
         try
         {
             AppBuilder.Configure(() => new App(() => host.Services.GetRequiredService<MainWindow>()))
                 .UsePlatformDetect()
-                .AfterSetup(_ => midiPlayer.Play()) // TEMP smoke-test: defer Play until Avalonia's dispatcher is bound
                 .StartWithClassicDesktopLifetime(args);
         }
         catch (Exception e)

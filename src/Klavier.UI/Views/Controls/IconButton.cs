@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.Media;
 using Klavier.UI.Theme;
 
@@ -20,8 +19,7 @@ public class IconButton : CustomButtonBase
             Height = Constants.IconSize,
             Foreground = DefaultTextBrush,
         };
-        Padding = new Thickness(10, 6);
-        VerticalAlignment = VerticalAlignment.Center;
+        Padding = new Thickness(10, 0);
         Child = _icon;
     }
 

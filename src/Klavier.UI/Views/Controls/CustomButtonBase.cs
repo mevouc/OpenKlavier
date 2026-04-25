@@ -4,8 +4,11 @@ namespace Klavier.UI.Views.Controls;
 
 public abstract class CustomButtonBase : ActivableControl
 {
+    private const double _DefaultHeight = 32;
+
     protected CustomButtonBase(bool momentaryActiveOnPress)
     {
+        Height = _DefaultHeight;
         if (momentaryActiveOnPress)
         {
             PointerPressed += (_, _) => IsActive = true;

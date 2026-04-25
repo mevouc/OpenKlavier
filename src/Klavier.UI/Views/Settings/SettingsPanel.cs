@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Klavier.Config;
 using Klavier.Core.Primitives;
 using Klavier.SoundFont;
@@ -12,6 +13,7 @@ using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Settings.KeybindsEditor;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -68,6 +70,7 @@ public partial class SettingsPanel : Border
 
     private readonly IUserSettingsService _settingsService;
     private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
+    private readonly ILogger<SettingsPanel> _logger;
 
     public SettingsPanel(
         IUserSettingsService settingsService,
@@ -76,10 +79,12 @@ public partial class SettingsPanel : Border
         IOptionsMonitor<AudioConfig> audioConfig,
         IOptionsMonitor<PlayerConfig> playerConfig,
         IOptionsMonitor<UIConfig> uiConfig,
-        Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor)
+        Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor,
+        ILogger<SettingsPanel> logger)
     {
         _settingsService = settingsService;
         _createKeybindsEditor = createKeybindsEditor;
+        _logger = logger;
 
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(12, 8);
@@ -133,10 +138,13 @@ public partial class SettingsPanel : Border
         SoundFontInfo soundFontInfo = soundFontInfoProvider.GetSoundFontInfo();
         ComboBox presetCombo = CreateComboBox(soundFontInfo.Presets.Values, FindPreset(soundFontInfo.Presets, audio.SoundFont.Preset));
 
-        (string soundFontDisplay, string? soundFontTooltip) = GetSoundFontDisplayName(soundFontInfo.Name, audio.SoundFont.Path);
-        TextBox soundFontPathDisplay = CreateSoundFontPathDisplay(soundFontDisplay, soundFontTooltip);
-        IconButton soundFontPickerButton = CreateSoundFontPickerButton();
-        Border soundFontPickerControl = CreateSoundFontPickerControl(soundFontPathDisplay, soundFontPickerButton);
+        FilePathPicker soundFontPicker = new(
+            _SoundFontPickerTitle,
+            _SoundFontTooltip,
+            new FilePickerFileType("SoundFont") { Patterns = ["*.sf2", "*.sf3"] },
+            () => audioConfig.CurrentValue.SoundFont.Path,
+            () => soundFontInfoProvider.GetSoundFontInfo().Name,
+            newPath => HandleSoundFontPath(newPath, audioConfig));
 
         TextBox accentHexTextBox = CreateHexColorTextBox(UserPalette.Accent);
         TextBox whiteKeyHexTextBox = CreateHexColorTextBox(UserPalette.WhiteKey);
@@ -164,7 +172,6 @@ public partial class SettingsPanel : Border
         WireComboBox(themeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
         WireComboBox(keyboardLayoutCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
         WirePresetComboBox(presetCombo, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Preset)));
-        WireSoundFontPicker(soundFontPickerButton, audioConfig);
 
         // Wire toggles
         WireToggle(topmostToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
@@ -195,9 +202,7 @@ public partial class SettingsPanel : Border
         }));
 
         playerConfig.OnChange(newPlayer => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            tempoSlider.Value = (int)Math.Round(newPlayer.TempoMultiplier * 100);
-        }));
+            tempoSlider.Value = (int)Math.Round(newPlayer.TempoMultiplier * 100)));
 
         soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -208,9 +213,7 @@ public partial class SettingsPanel : Border
             {
                 presetCombo.SelectedItem = preset.Value;
             }
-            (string display, string? tooltip) = GetSoundFontDisplayName(updatedInfo.Name, audioConfig.CurrentValue.SoundFont.Path);
-            soundFontPathDisplay.Text = display;
-            ToolTip.SetTip(soundFontPathDisplay, tooltip);
+            soundFontPicker.Refresh();
         });
 
         uiConfig.OnChange(newUi => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -254,7 +257,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_VolumeLabel, volumeValue, volumeSlider),
                     CreateRow(_TempoLabel, tempoValue, tempoSlider, tooltip: _TempoTooltip),
                     CreateRow(_SustainModeLabel, sustainModeCombo, tooltip: _SustainModeTooltip),
-                    CreateRow(_SoundFontLabel, soundFontPickerControl, tooltip: _SoundFontTooltip),
+                    CreateRow(_SoundFontLabel, soundFontPicker, tooltip: _SoundFontTooltip),
                     CreateRow(_PresetLabel, presetCombo, tooltip: _PresetTooltip),
 
                     CreateSectionHeader(_PianoDisplaySectionTitle),

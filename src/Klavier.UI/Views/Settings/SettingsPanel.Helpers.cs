@@ -3,14 +3,13 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Platform.Storage;
 using Klavier.Config;
 using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
-using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Settings.KeybindsEditor;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -243,45 +242,12 @@ public partial class SettingsPanel
             : null;
     }
 
-    private static TextBox CreateSoundFontPathDisplay(string displayText, string? tooltip)
-    {
-        TextBox textBox = new()
-        {
-            Text = displayText,
-            IsReadOnly = true,
-            Focusable = false,
-            Foreground = _TextBrush,
-            FontSize = Constants.PrimaryFontSize,
-            Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-            VerticalAlignment = VerticalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            Padding = new Thickness(8, 0),
-        };
-        ToolTip.SetTip(textBox, tooltip);
-        return textBox;
-    }
-
-    private static IconButton CreateSoundFontPickerButton()
-    {
-        // Folder glyph (Material Icons "folder", 24x24 viewport).
-        Geometry folderGeometry = Geometry.Parse(
-            "M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z");
-        return new IconButton(folderGeometry)
-        {
-            VerticalAlignment = VerticalAlignment.Stretch,
-        };
-    }
-
     private static IconButton CreatePlusIconButton()
     {
         // Plus glyph (Material Icons "plus", 24x24 viewport).
         Geometry plusGeometry = Geometry.Parse(
             "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z");
-        return new IconButton(plusGeometry)
-        {
-            VerticalAlignment = VerticalAlignment.Stretch,
-        };
+        return new IconButton(plusGeometry);
     }
 
     private static IconButton CreatePencilIconButton()
@@ -289,10 +255,7 @@ public partial class SettingsPanel
         // Pencil glyph (Material Icons "pencil", 24x24 viewport).
         Geometry pencilGeometry = Geometry.Parse(
             "M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z");
-        return new IconButton(pencilGeometry)
-        {
-            VerticalAlignment = VerticalAlignment.Stretch,
-        };
+        return new IconButton(pencilGeometry);
     }
 
     private void WireKeybindsEditorButton(
@@ -332,99 +295,27 @@ public partial class SettingsPanel
         }
     }
 
-    private static Border CreateSoundFontPickerControl(TextBox pathDisplay, Border pickerButton)
+    private async Task<bool> HandleSoundFontPath(string newPath, IOptionsMonitor<AudioConfig> audioConfig)
     {
-        DockPanel.SetDock(pickerButton, Dock.Right);
-        return new Border
-        {
-            Background = _ContrastedSurfaceBrush,
-            BorderBrush = _NeutralSurfaceBrush,
-            BorderThickness = new Thickness(Constants.BorderThickness),
-            CornerRadius = new CornerRadius(Constants.CornerRadius),
-            ClipToBounds = true,
-            MinWidth = 200,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Child = new DockPanel
-            {
-                LastChildFill = true,
-                Children = { pickerButton, pathDisplay },
-            },
-        };
-    }
-
-    private static (string Display, string? Tooltip) GetSoundFontDisplayName(string? soundFontName, string filePath)
-    {
-        if (!string.IsNullOrWhiteSpace(soundFontName))
-        {
-            return (Display: soundFontName, Tooltip: filePath);
-        }
-        return (Display: Path.GetFileName(filePath), Tooltip: null);
-    }
-
-    private void WireSoundFontPicker(IconButton pickerButton, IOptionsMonitor<AudioConfig> audioConfig)
-    {
-        pickerButton.PointerPressed += async (_, e) =>
-        {
-            e.Handled = true;
-            try
-            {
-                await HandleSoundFontPicker(pickerButton, audioConfig);
-            }
-            finally
-            {
-                pickerButton.IsActive = false;
-            }
-        };
-    }
-
-    private async Task HandleSoundFontPicker(IconButton pickerButton, IOptionsMonitor<AudioConfig> audioConfig)
-    {
-        TopLevel? topLevel = TopLevel.GetTopLevel(pickerButton);
-        if (topLevel is null)
-        {
-            return;
-        }
-
-        SoundFontConfig soundFontConfig = audioConfig.CurrentValue.SoundFont;
-
-        IStorageFolder? suggestedFolder = null;
-        string? currentDir = Path.GetDirectoryName(soundFontConfig.Path);
-        if (!string.IsNullOrEmpty(currentDir))
-        {
-            suggestedFolder = await topLevel.StorageProvider.TryGetFolderFromPathAsync(currentDir);
-        }
-
-        IReadOnlyList<IStorageFile> files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = _SoundFontPickerTitle,
-            AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("SoundFont")
-                    {
-                        Patterns = ["*.sf2", "*.sf3"],
-                    }],
-            SuggestedStartLocation = suggestedFolder,
-        });
-        if (files.Count == 0)
-        {
-            return;
-        }
-        string newPath = files[0].Path.LocalPath;
-
         SoundFontInfo newInfo;
         try
         {
             newInfo = SoundFontParser.ParseInfo(newPath);
         }
-        catch (InvalidDataException)
+        catch (InvalidDataException ex)
         {
-            return; // not a soundfont file, abort file update
+            _logger.LogWarning(ex, "Failed to load SoundFont file {Path}", newPath);
+            return false;
         }
 
+        SoundFontConfig soundFontConfig = audioConfig.CurrentValue.SoundFont;
         (int newBank, int newProgram) = DetermineNewPreset(newInfo.Presets, soundFontConfig.Preset);
 
         _settingsService.UpdateSetting(
             ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont)),
             new { Path = newPath, Preset = new { newBank, newProgram } });
+
+        return true;
     }
 
     // Keep the current (Bank, Program) if still present in the new SF; otherwise pick (0, 0)
