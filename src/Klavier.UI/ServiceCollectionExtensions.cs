@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<SustainBarControl>()));
         services.AddTransient<FallingNotesView>();
         services.AddTransient<PlayerBarView>();
+        services.AddTransient<ProgressBarView>();
         services.AddTransient<PlayerView>();
         services.AddTransient<ToolbarView>();
         services.AddTransient<SettingsPanel>();

@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
+using Klavier.UI.Theme;
 
 namespace Klavier.UI.Views.Controls;
 
@@ -8,17 +10,18 @@ public class IconButton : CustomButtonBase
 {
     private readonly PathIcon _icon;
 
-    public IconButton(Geometry glyph, double iconSize, bool momentaryActiveOnPress = true)
+    public IconButton(Geometry glyph, bool momentaryActiveOnPress = true)
         : base(momentaryActiveOnPress)
     {
         _icon = new PathIcon
         {
             Data = glyph,
-            Width = iconSize,
-            Height = iconSize,
+            Width = Constants.IconSize,
+            Height = Constants.IconSize,
             Foreground = DefaultTextBrush,
         };
-        Padding = new Thickness(10, 0);
+        Padding = new Thickness(10, 6);
+        VerticalAlignment = VerticalAlignment.Center;
         Child = _icon;
     }
 

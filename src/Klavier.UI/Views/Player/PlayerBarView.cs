@@ -14,8 +14,7 @@ namespace Klavier.UI.Views.Player;
 
 public class PlayerBarView : DockPanel
 {
-    private const double _RowHeight = 36;
-    private const double _IconSize = 16;
+    private const double _RowHeight = 42;
 
     // Material Design icon path data (24x24 viewbox)
     private static readonly Geometry _PlayIcon = Geometry.Parse("M8 5v14l11-7z");
@@ -55,17 +54,16 @@ public class PlayerBarView : DockPanel
             Margin = new Thickness(0, 0, 12, 0),
         };
 
-        _playPauseButton = new IconButton(_PlayIcon, _IconSize);
+        _playPauseButton = new IconButton(_PlayIcon);
         _playPauseButton.PointerReleased += OnPlayPausePressed;
         rightGroup.Children.Add(_playPauseButton);
 
-        IconButton stopButton = new(_StopIcon, _IconSize);
+        IconButton stopButton = new(_StopIcon);
         stopButton.PointerReleased += OnStopPressed;
         rightGroup.Children.Add(stopButton);
 
         _audioToggleButton = new IconButton(
-            _player.AudioEnabled ? _VolumeOnIcon : _VolumeOffIcon,
-            _IconSize);
+            _player.AudioEnabled ? _VolumeOnIcon : _VolumeOffIcon);
         _audioToggleButton.PointerReleased += OnAudioTogglePressed;
         rightGroup.Children.Add(_audioToggleButton);
 
