@@ -24,4 +24,5 @@ public interface IMidiPlayer
     event Action<NoteOnEvent>? NoteOn;
     event Action<NoteOffEvent>? NoteOff;
     event Action<bool>? SustainChanged;
+    event Action<bool>? AudioEnabledChanged;
 }

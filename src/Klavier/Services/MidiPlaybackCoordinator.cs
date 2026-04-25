@@ -1,6 +1,7 @@
 using Klavier.Core.Engine;
 using Klavier.Core.Events;
 using Klavier.Core.Primitives;
+using Klavier.Midi;
 using Klavier.Midi.Player;
 
 namespace Klavier.Services;
@@ -18,6 +19,10 @@ public class MidiPlaybackCoordinator
         _player.NoteOn += OnPlayerNoteOn;
         _player.NoteOff += OnPlayerNoteOff;
         _player.SustainChanged += OnPlayerSustainChanged;
+        _player.AudioEnabledChanged += OnAudioEnabledChanged;
+        _player.Loaded += OnPlayerLoaded;
+        _player.Stopped += DrainPlaybackState;
+        _player.Finished += DrainPlaybackState;
         _engine.PanicRaised += OnEnginePanicRaised;
     }
 
@@ -27,7 +32,7 @@ public class MidiPlaybackCoordinator
         {
             return;
         }
-        _engine.NoteOn(noteEvent.KeyPitch, noteEvent.Velocity);
+        _engine.NoteOn(noteEvent.KeyPitch, noteEvent.Velocity, InputSource.Playback);
     }
 
     private void OnPlayerNoteOff(NoteOffEvent noteEvent)
@@ -36,7 +41,7 @@ public class MidiPlaybackCoordinator
         {
             return;
         }
-        _engine.NoteOff(noteEvent.KeyPitch);
+        _engine.NoteOff(noteEvent.KeyPitch, InputSource.Playback);
     }
 
     private void OnPlayerSustainChanged(bool isOn)
@@ -53,6 +58,26 @@ public class MidiPlaybackCoordinator
         {
             _engine.SustainOff(InputSource.Playback);
         }
+    }
+
+    private void OnAudioEnabledChanged(bool enabled)
+    {
+        if (enabled)
+        {
+            return;
+        }
+        DrainPlaybackState();
+    }
+
+    private void OnPlayerLoaded(MidiScore _)
+    {
+        DrainPlaybackState();
+    }
+
+    private void DrainPlaybackState()
+    {
+        _engine.AllNotesOff(InputSource.Playback);
+        _engine.SustainOff(InputSource.Playback);
     }
 
     private void OnEnginePanicRaised()

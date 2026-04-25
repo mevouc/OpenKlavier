@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Klavier.Midi.Player;
 
-public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer> logger) : IMidiPlayer, IDisposable
+public class MidiPlayer : IMidiPlayer, IDisposable
 {
     private const int _TickIntervalMs = 16;
     private const double _MinTempoMultiplier = 0.25;
@@ -16,13 +16,27 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
     private readonly Stopwatch _stopwatch = new();
     private readonly HashSet<MidiNote> _activeNotes = [];
 
+    private readonly ILogger<MidiPlayer> _logger;
+    private readonly IDisposable? _configSubscription;
+
     private MidiPlayerState _state = MidiPlayerState.Idle;
     private MidiScore? _currentScore;
     private List<TimelineEvent> _timeline = [];
     private int _timelineIndex;
     private TimeSpan _position;
-    private double _tempoMultiplier = Math.Clamp(playerConfig.Value.TempoMultiplier, _MinTempoMultiplier, _MaxTempoMultiplier);
+    private double _tempoMultiplier;
+    private bool _audioEnabled;
     private Timer? _timer;
+
+    public MidiPlayer(IOptionsMonitor<PlayerConfig> playerConfig, ILogger<MidiPlayer> logger)
+    {
+        _logger = logger;
+
+        _tempoMultiplier = Math.Clamp(playerConfig.CurrentValue.TempoMultiplier, _MinTempoMultiplier, _MaxTempoMultiplier);
+        _audioEnabled = playerConfig.CurrentValue.AudioEnabled;
+
+        _configSubscription = playerConfig.OnChange(OnPlayerConfigChanged);
+    }
 
     public MidiPlayerState State => _state;
     public MidiScore? CurrentScore => _currentScore;
@@ -34,7 +48,19 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
         set => _tempoMultiplier = Math.Clamp(value, _MinTempoMultiplier, _MaxTempoMultiplier);
     }
 
-    public bool AudioEnabled { get; set; } = playerConfig.Value.AudioEnabled;
+    public bool AudioEnabled
+    {
+        get => _audioEnabled;
+        set
+        {
+            if (_audioEnabled == value)
+            {
+                return;
+            }
+            _audioEnabled = value;
+            AudioEnabledChanged?.Invoke(value);
+        }
+    }
 
     public event Action<MidiScore>? Loaded;
     public event Action? Started;
@@ -45,6 +71,7 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
     public event Action<NoteOnEvent>? NoteOn;
     public event Action<NoteOffEvent>? NoteOff;
     public event Action<bool>? SustainChanged;
+    public event Action<bool>? AudioEnabledChanged;
 
     public void Load(MidiScore score)
     {
@@ -59,7 +86,7 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
             _timelineIndex = 0;
             _position = TimeSpan.Zero;
             _state = MidiPlayerState.Loaded;
-            logger.LogInformation(
+            _logger.LogInformation(
                 "Loaded score '{DisplayName}' ({NoteCount} notes, {SustainCount} sustain events, duration {Duration})",
                 score.DisplayName, score.Notes.Count, score.SustainEvents.Count, score.TotalDuration);
             Loaded?.Invoke(score);
@@ -81,7 +108,7 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
             _stopwatch.Restart();
             _timer = new Timer(OnTick, null, _TickIntervalMs, _TickIntervalMs);
             _state = MidiPlayerState.Playing;
-            logger.LogInformation("Player started");
+            _logger.LogInformation("Player started");
             Started?.Invoke();
         }
     }
@@ -98,7 +125,7 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
             _timer = null;
             _stopwatch.Stop();
             _state = MidiPlayerState.Paused;
-            logger.LogInformation("Player paused at {Position}", _position);
+            _logger.LogInformation("Player paused at {Position}", _position);
             Paused?.Invoke();
         }
     }
@@ -113,7 +140,7 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
             }
             DrainAndReset();
             _state = _currentScore is null ? MidiPlayerState.Idle : MidiPlayerState.Loaded;
-            logger.LogInformation("Player stopped");
+            _logger.LogInformation("Player stopped");
             Stopped?.Invoke();
         }
     }
@@ -125,7 +152,17 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
             _timer?.Dispose();
             _timer = null;
         }
+        _configSubscription?.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    private void OnPlayerConfigChanged(PlayerConfig newConfig)
+    {
+        lock (_lock)
+        {
+            _tempoMultiplier = Math.Clamp(newConfig.TempoMultiplier, _MinTempoMultiplier, _MaxTempoMultiplier);
+            AudioEnabled = newConfig.AudioEnabled;
+        }
     }
 
     private void OnTick(object? _)
@@ -199,7 +236,7 @@ public class MidiPlayer(IOptions<PlayerConfig> playerConfig, ILogger<MidiPlayer>
     {
         DrainAndReset();
         _state = MidiPlayerState.Loaded;
-        logger.LogInformation("Player finished");
+        _logger.LogInformation("Player finished");
         Finished?.Invoke();
     }
 

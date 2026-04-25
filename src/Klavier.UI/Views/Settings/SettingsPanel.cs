@@ -31,6 +31,7 @@ public partial class SettingsPanel : Border
     private const string _VelocityLabel = "Velocity";
     private const string _TransposeLabel = "Transpose";
     private const string _VolumeLabel = "Volume";
+    private const string _TempoLabel = "Playback speed";
     private const string _SustainModeLabel = "Sustain behavior";
     private const string _TopmostLabel = "Always on top";
     private const string _ShowKeyLabelsLabel = "Show keyboard keys";
@@ -48,6 +49,7 @@ public partial class SettingsPanel : Border
 
     private const string _VelocityTooltip = "How hard keys are pressed (0 - 127).\nHigher: louder and brighter timbre";
     private const string _TransposeTooltip = "Shift note pitches up or down by semitones (-24 - 24)";
+    private const string _TempoTooltip = "MIDI file playback speed (0.25x = quarter speed, 2.0x = double speed)";
     private const string _SustainModeTooltip = "Hold: sustain while pressed\nInverted hold: sustain while released\nToggle: press to flip on/off";
     private const string _ShowKeyLabelsTooltip = "Overlay computer keyboard letters on piano keys";
     private const string _ShowNoteLabelsTooltip = "Overlay musical note names on piano keys";
@@ -72,6 +74,7 @@ public partial class SettingsPanel : Border
         ISoundFontInfoProvider soundFontInfoProvider,
         IOptionsMonitor<PianoConfig> pianoConfig,
         IOptionsMonitor<AudioConfig> audioConfig,
+        IOptionsMonitor<PlayerConfig> playerConfig,
         IOptionsMonitor<UIConfig> uiConfig,
         Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor)
     {
@@ -84,6 +87,7 @@ public partial class SettingsPanel : Border
 
         PianoConfig piano = pianoConfig.CurrentValue;
         AudioConfig audio = audioConfig.CurrentValue;
+        PlayerConfig player = playerConfig.CurrentValue;
         UIConfig ui = uiConfig.CurrentValue;
 
         Slider velocitySlider = CreateSlider(NoteVelocity.MinValue, NoteVelocity.MaxValue, piano.Velocity);
@@ -94,6 +98,9 @@ public partial class SettingsPanel : Border
 
         Slider volumeSlider = CreateSlider(0, 120, audio.VolumeInPercent);
         TextBlock volumeValue = CreateValueLabel($"{audio.VolumeInPercent}%");
+
+        Slider tempoSlider = CreateSlider(25, 200, (int)Math.Round(player.TempoMultiplier * 100));
+        TextBlock tempoValue = CreateValueLabel($"{player.TempoMultiplier:0.00}x");
 
         ComboBox sustainModeCombo = CreateComboBox(ui.SustainMode);
         sustainModeCombo.ItemTemplate = new FuncDataTemplate<SustainMode>((mode, _) => new TextBlock
@@ -140,6 +147,16 @@ public partial class SettingsPanel : Border
         WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
         WireSlider(transposeSlider, transposeValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
         WireSlider(volumeSlider, volumeValue, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
+        // Tempo: slider is 25-200 (percent), config stores 0.25-2.0 (multiplier).
+        tempoSlider.ValueChanged += (_, e) =>
+        {
+            int percent = (int)e.NewValue;
+            double tempo = percent / 100.0;
+            tempoValue.Text = $"{tempo:0.00}x";
+            _settingsService.UpdateSetting(
+                ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.TempoMultiplier)),
+                tempo);
+        };
 
         // Wire dropdowns
         WireComboBox(sustainModeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.SustainMode)));
@@ -175,6 +192,11 @@ public partial class SettingsPanel : Border
             {
                 presetCombo.SelectedItem = preset.Value;
             }
+        }));
+
+        playerConfig.OnChange(newPlayer => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            tempoSlider.Value = (int)Math.Round(newPlayer.TempoMultiplier * 100);
         }));
 
         soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -230,6 +252,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_VelocityLabel, velocityValue, velocitySlider, tooltip: _VelocityTooltip),
                     CreateRow(_TransposeLabel, transposeValue, transposeSlider, tooltip: _TransposeTooltip),
                     CreateRow(_VolumeLabel, volumeValue, volumeSlider),
+                    CreateRow(_TempoLabel, tempoValue, tempoSlider, tooltip: _TempoTooltip),
                     CreateRow(_SustainModeLabel, sustainModeCombo, tooltip: _SustainModeTooltip),
                     CreateRow(_SoundFontLabel, soundFontPickerControl, tooltip: _SoundFontTooltip),
                     CreateRow(_PresetLabel, presetCombo, tooltip: _PresetTooltip),

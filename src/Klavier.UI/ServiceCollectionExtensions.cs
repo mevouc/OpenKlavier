@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<PianoViewModel>().Keys,
             sp.GetRequiredService<SustainBarControl>()));
         services.AddTransient<FallingNotesView>();
+        services.AddTransient<PlayerBarView>();
         services.AddTransient<PlayerView>();
         services.AddTransient<ToolbarView>();
         services.AddTransient<SettingsPanel>();
