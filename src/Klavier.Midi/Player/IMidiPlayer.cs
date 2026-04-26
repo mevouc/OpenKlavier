@@ -6,6 +6,7 @@ public interface IMidiPlayer
 {
     MidiPlayerState State { get; }
     MidiScore? CurrentScore { get; }
+    bool HasLoadedScore => CurrentScore is not null;
     TimeSpan Position { get; }
     double TempoMultiplier { get; set; }
     bool AudioEnabled { get; set; }

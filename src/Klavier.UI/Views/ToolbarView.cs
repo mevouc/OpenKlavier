@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Klavier.Config;
 using Klavier.Core.Engine;
 using Klavier.Midi;
@@ -25,11 +26,20 @@ public class ToolbarView : Border
     private readonly IMidiPlayer _midiPlayer;
     private readonly IUserSettingsService _settingsService;
     private readonly ILogger<ToolbarView> _logger;
-    private readonly FilePathPicker _midiPicker;
+    private readonly ToggleTextButton _settingsButton;
+    private readonly ToggleTextButton _playerToggleButton;
 
-    private bool _isSettingsOpen;
+    public event Action<bool>? SettingsToggled
+    {
+        add => _settingsButton.Toggled += value;
+        remove => _settingsButton.Toggled -= value;
+    }
 
-    public event Action<bool>? SettingsToggled;
+    public event Action<bool>? PlayerToggled
+    {
+        add => _playerToggleButton.Toggled += value;
+        remove => _playerToggleButton.Toggled -= value;
+    }
 
     public ToolbarView(
         IPianoEngine pianoEngine,
@@ -59,30 +69,26 @@ public class ToolbarView : Border
             e.Handled = true;
         };
 
-        TextButton settingsButton = new("Settings", momentaryActiveOnPress: false) { Margin = new Thickness(4, 0, 0, 0) };
-        settingsButton.PointerPressed += (_, e) =>
-        {
-            _isSettingsOpen = !_isSettingsOpen;
-            settingsButton.IsActive = _isSettingsOpen;
-            SettingsToggled?.Invoke(_isSettingsOpen);
-            e.Handled = true;
-        };
+        _settingsButton = new ToggleTextButton("Settings");
 
-        _midiPicker = new FilePathPicker(
+        FilePathPicker midiPicker = new(
             _MidiPickerTitle,
             _MidiTooltip,
             new FilePickerFileType("MIDI files") { Patterns = ["*.mid", "*.midi"] },
             () => playerConfig.CurrentValue.Path,
             () => _midiPlayer.CurrentScore?.DisplayName,
-            HandleMidiPath)
-        {
-            Margin = new Thickness(4, 0, 0, 0),
-        };
+            HandleMidiPath);
+
+        _playerToggleButton = new ToggleTextButton("Player") { IsEnabled = _midiPlayer.HasLoadedScore };
+        // Auto-load (e.g. AutoLoadMidi at startup) only enables the button; the player is opened only via
+        // an explicit click or via HandleMidiPath (user-triggered load).
+        _midiPlayer.Loaded += _ => Dispatcher.UIThread.Post(() => _playerToggleButton.IsEnabled = true);
 
         Child = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Children = { panicButton, settingsButton, _midiPicker },
+            Spacing = 4,
+            Children = { panicButton, _settingsButton, midiPicker, _playerToggleButton },
         };
     }
 
@@ -103,6 +109,10 @@ public class ToolbarView : Border
         _settingsService.UpdateSetting(
             ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.Path)),
             newPath);
+
+        // User-triggered load: open the player (auto-load via Loaded event does not).
+        _playerToggleButton.IsToggled = true;
+
         return true;
     }
 }

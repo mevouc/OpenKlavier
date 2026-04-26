@@ -16,20 +16,17 @@ public class MainWindow : Window
 {
     private const string _WindowTitle = "Klavier";
     private const int _DefaultWidth = 1000;
-    private const int _DefaultHeight = 500;
+    private const int _DefaultHeight = 280;
     private const int _MinWidth = 700;
     private const int _MinHeight = 150;
     private const int _SettingsMinHeight = 150;
     private const int _SplitterHeight = 8;
     private const int _DefaultSettingsHeight = 300;
-    private const int _DefaultPianoHeight = 200;
+    private const int _DefaultPlayerHeight = 250;
     private const int _PianoMinHeight = 100;
     private const int _PlayerMinHeight = 80;
 
     private readonly KeyboardInputHandler _keyboardInput;
-    private readonly SettingsPanel _settingsPanel;
-    private readonly DraggableSplitter _splitter;
-    private readonly RowDefinition _settingsRow;
 
     public MainWindow(
         KeyboardInputHandler keyboardInput,
@@ -40,7 +37,6 @@ public class MainWindow : Window
         IOptionsMonitor<UIConfig> uiConfig)
     {
         _keyboardInput = keyboardInput;
-        _settingsPanel = settingsPanel;
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -53,51 +49,84 @@ public class MainWindow : Window
 
         uiConfig.OnChange(config => Avalonia.Threading.Dispatcher.UIThread.Post(() => Topmost = config.Topmost));
 
-        // Top section: player (star) / piano (fixed) / separator / toolbar; splitter floats at the player-piano boundary
+        // Piano section: piano (star) / separator / toolbar.
         Grid separator = CreatePianoSeparator();
-        DraggableSplitter pianoSplitter = new(_SplitterHeight) { IsVisible = true };
-        pianoSplitter.StraddleBottomBoundary();
-
-        Grid.SetRow(playerView, 0);
-        Grid.SetRow(pianoView, 1);
-        Grid.SetRow(separator, 2);
-        Grid.SetRow(toolbarView, 3);
-        Grid.SetRow(pianoSplitter.HitArea, 0);
-        Grid.SetRow(pianoSplitter.Visual, 0);
-
-        Grid topSection = new()
+        Grid pianoSection = new()
         {
             RowDefinitions =
             {
-                new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = _PlayerMinHeight },
-                new RowDefinition { Height = new GridLength(_DefaultPianoHeight), MinHeight = _PianoMinHeight },
+                new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = _PianoMinHeight },
                 new RowDefinition { Height = GridLength.Auto },
                 new RowDefinition { Height = GridLength.Auto },
             },
-            Children = { playerView, pianoView, separator, toolbarView, pianoSplitter.HitArea, pianoSplitter.Visual },
         };
+        Grid.SetRow(pianoView, 0);
+        Grid.SetRow(separator, 1);
+        Grid.SetRow(toolbarView, 2);
+        pianoSection.Children.Add(pianoView);
+        pianoSection.Children.Add(separator);
+        pianoSection.Children.Add(toolbarView);
 
-        // Draggable splitter between top section and settings panel
-        _splitter = new DraggableSplitter(_SplitterHeight);
+        // Player splitter straddles the player row's bottom edge - zero layout space, half-overflows into the piano section.
+        DraggableSplitter playerSplitter = new(_SplitterHeight);
+        playerSplitter.StraddleBottomBoundary();
+        // Settings splitter sits in its own row, taking _SplitterHeight of layout space.
+        DraggableSplitter settingsSplitter = new(_SplitterHeight);
 
-        // Layout: top section + splitter + settings panel
-        RowDefinition topRow = new() { Height = new GridLength(1, GridUnitType.Star), MinHeight = _MinHeight };
-        RowDefinition splitterRow = new() { Height = GridLength.Auto };
-        _settingsRow = new RowDefinition { Height = new GridLength(0), MinHeight = 0 };
+        // Outer layout: player (collapsible, contains its straddling splitter) / pianoSection / settingsSplitter / settings (collapsible).
+        RowDefinition playerRow = new();
+        RowDefinition pianoSectionRow = new() { Height = new GridLength(1, GridUnitType.Star), MinHeight = _MinHeight };
+        RowDefinition settingsSplitterRow = new() { Height = GridLength.Auto };
+        RowDefinition settingsRow = new();
 
-        Grid.SetRow(topSection, 0);
-        Grid.SetRow(_splitter.HitArea, 1);
-        Grid.SetRow(_splitter.Visual, 1);
-        Grid.SetRow(_settingsPanel, 2);
+        Grid.SetRow(playerView, 0);
+        Grid.SetRow(playerSplitter.HitArea, 0);
+        Grid.SetRow(playerSplitter.Visual, 0);
+        Grid.SetRow(pianoSection, 1);
+        Grid.SetRow(settingsSplitter.HitArea, 2);
+        Grid.SetRow(settingsSplitter.Visual, 2);
+        Grid.SetRow(settingsPanel, 3);
 
         Content = new Grid
         {
-            RowDefinitions = { topRow, splitterRow, _settingsRow },
-            Children = { topSection, _splitter.HitArea, _splitter.Visual, _settingsPanel },
+            RowDefinitions = { playerRow, pianoSectionRow, settingsSplitterRow, settingsRow },
+            Children =
+            {
+                playerView,
+                playerSplitter.HitArea, playerSplitter.Visual,
+                pianoSection,
+                settingsSplitter.HitArea, settingsSplitter.Visual,
+                settingsPanel,
+            },
         };
 
-        // Toggle settings
-        toolbarView.SettingsToggled += ToggleSettingsPanel;
+        CollapsibleSection playerSection = new(
+            content: playerView,
+            splitter: playerSplitter,
+            row: playerRow,
+            window: this,
+            defaultHeight: _DefaultPlayerHeight,
+            minHeight: _PlayerMinHeight,
+            splitterLayoutHeight: 0,
+            growUpward: true);
+
+        CollapsibleSection settingsSection = new(
+            content: settingsPanel,
+            splitter: settingsSplitter,
+            row: settingsRow,
+            window: this,
+            defaultHeight: _DefaultSettingsHeight,
+            minHeight: _SettingsMinHeight,
+            splitterLayoutHeight: _SplitterHeight,
+            growUpward: false,
+            measureContentHeight: () =>
+            {
+                settingsPanel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                return settingsPanel.DesiredSize.Height;
+            });
+
+        toolbarView.SettingsToggled += settingsSection.SetOpen;
+        toolbarView.PlayerToggled += playerSection.SetOpen;
 
         // Blur any focused TextBox on a pointer click outside of it (commits the value via LostFocus).
         AddHandler(PointerPressedEvent, (_, e) =>
@@ -107,33 +136,6 @@ public class MainWindow : Window
                 Focus();
             }
         }, RoutingStrategies.Tunnel);
-    }
-
-    private void ToggleSettingsPanel(bool isOpen)
-    {
-        _settingsPanel.IsVisible = isOpen;
-        _splitter.IsVisible = isOpen;
-
-        if (isOpen)
-        {
-            _settingsPanel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            double contentHeight = _settingsPanel.DesiredSize.Height;
-
-            _settingsRow.Height = new GridLength(Math.Min(_DefaultSettingsHeight, contentHeight));
-            _settingsRow.MinHeight = _SettingsMinHeight;
-            _settingsRow.MaxHeight = contentHeight;
-            MinHeight = _MinHeight + _SettingsMinHeight + _SplitterHeight;
-            Height += _settingsRow.Height.Value + _SplitterHeight;
-        }
-        else
-        {
-            double previousHeight = _settingsRow.Height.Value;
-            _settingsRow.Height = new GridLength(0);
-            _settingsRow.MinHeight = 0;
-            _settingsRow.MaxHeight = double.PositiveInfinity;
-            MinHeight = _MinHeight;
-            Height -= previousHeight + _SplitterHeight;
-        }
     }
 
     private static Grid CreatePianoSeparator()

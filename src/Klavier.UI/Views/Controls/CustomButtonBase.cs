@@ -14,6 +14,10 @@ public abstract class CustomButtonBase : ActivableControl
             PointerPressed += (_, _) => IsActive = true;
             PointerReleased += (_, _) => IsActive = false;
         }
+        else
+        {
+            PointerPressed += (_, _) => IsActive = !IsActive;
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -22,6 +26,7 @@ public abstract class CustomButtonBase : ActivableControl
         if (change.Property == IsEnabledProperty)
         {
             Opacity = IsEnabled ? 1.0 : 0.5;
+            IsActive = IsEnabled;
         }
     }
 }

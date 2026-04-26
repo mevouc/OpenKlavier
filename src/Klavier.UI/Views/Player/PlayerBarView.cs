@@ -78,9 +78,9 @@ public class PlayerBarView : DockPanel
         };
         Children.Add(_timeLabel);
 
-        if (_player.CurrentScore is not null)
+        if (_player.HasLoadedScore)
         {
-            ApplyLoaded(_player.CurrentScore);
+            ApplyLoaded(_player.CurrentScore!);
         }
         _player.Loaded += score => Dispatcher.UIThread.Post(() => ApplyLoaded(score));
         _player.Started += () => Dispatcher.UIThread.Post(() => _playPauseButton.Glyph = _PauseIcon);
@@ -118,7 +118,7 @@ public class PlayerBarView : DockPanel
         {
             _player.Pause();
         }
-        else if (_player.CurrentScore is not null)
+        else if (_player.HasLoadedScore)
         {
             _player.Play();
         }
