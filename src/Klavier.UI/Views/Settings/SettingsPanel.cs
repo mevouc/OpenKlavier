@@ -34,6 +34,7 @@ public partial class SettingsPanel : Border
     private const string _TransposeLabel = "Transpose";
     private const string _VolumeLabel = "Volume";
     private const string _TempoLabel = "Playback speed";
+    private const string _LookaheadLabel = "Lookahead";
     private const string _SustainModeLabel = "Sustain behavior";
     private const string _TopmostLabel = "Always on top";
     private const string _ShowKeyLabelsLabel = "Show keyboard keys";
@@ -52,6 +53,7 @@ public partial class SettingsPanel : Border
     private const string _VelocityTooltip = "How hard keys are pressed (0 - 127).\nHigher: louder and brighter timbre";
     private const string _TransposeTooltip = "Shift note pitches up or down by semitones (-24 - 24)";
     private const string _TempoTooltip = "MIDI file playback speed (0.25x = quarter speed, 2.0x = double speed)";
+    private const string _LookaheadTooltip = "How many seconds of upcoming notes are shown above the piano";
     private const string _SustainModeTooltip = "Hold: sustain while pressed\nInverted hold: sustain while released\nToggle: press to flip on/off";
     private const string _ShowKeyLabelsTooltip = "Overlay computer keyboard letters on piano keys";
     private const string _ShowNoteLabelsTooltip = "Overlay musical note names on piano keys";
@@ -107,6 +109,9 @@ public partial class SettingsPanel : Border
         Slider tempoSlider = CreateSlider(25, 200, (int)Math.Round(player.TempoMultiplier * 100));
         TextBlock tempoValue = CreateValueLabel($"{player.TempoMultiplier:0.00}x");
 
+        Slider lookaheadSlider = CreateSlider(1, 10, player.LookaheadSeconds);
+        TextBlock lookaheadValue = CreateValueLabel($"{player.LookaheadSeconds} s");
+
         ComboBox sustainModeCombo = CreateComboBox(ui.SustainMode);
         sustainModeCombo.ItemTemplate = new FuncDataTemplate<SustainMode>((mode, _) => new TextBlock
         {
@@ -155,6 +160,7 @@ public partial class SettingsPanel : Border
         WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
         WireSlider(transposeSlider, transposeValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
         WireSlider(volumeSlider, volumeValue, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
+        WireSlider(lookaheadSlider, lookaheadValue, ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.LookaheadSeconds)), val => $"{val} s");
         // Tempo: slider is 25-200 (percent), config stores 0.25-2.0 (multiplier).
         tempoSlider.ValueChanged += (_, e) =>
         {
@@ -202,7 +208,10 @@ public partial class SettingsPanel : Border
         }));
 
         playerConfig.OnChange(newPlayer => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            tempoSlider.Value = (int)Math.Round(newPlayer.TempoMultiplier * 100)));
+        {
+            tempoSlider.Value = (int)Math.Round(newPlayer.TempoMultiplier * 100);
+            lookaheadSlider.Value = newPlayer.LookaheadSeconds;
+        }));
 
         soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -256,6 +265,7 @@ public partial class SettingsPanel : Border
                     CreateRow(_TransposeLabel, transposeValue, transposeSlider, tooltip: _TransposeTooltip),
                     CreateRow(_VolumeLabel, volumeValue, volumeSlider),
                     CreateRow(_TempoLabel, tempoValue, tempoSlider, tooltip: _TempoTooltip),
+                    CreateRow(_LookaheadLabel, lookaheadValue, lookaheadSlider, tooltip: _LookaheadTooltip),
                     CreateRow(_SustainModeLabel, sustainModeCombo, tooltip: _SustainModeTooltip),
                     CreateRow(_SoundFontLabel, soundFontPicker, tooltip: _SoundFontTooltip),
                     CreateRow(_PresetLabel, presetCombo, tooltip: _PresetTooltip),
