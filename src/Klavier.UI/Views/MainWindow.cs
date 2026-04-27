@@ -1,7 +1,9 @@
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Klavier.UI.Input;
@@ -12,6 +14,8 @@ using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
 using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Player;
+using Avalonia.Controls.Shapes;
+using Path = System.IO.Path;
 
 namespace Klavier.UI.Views;
 
@@ -28,10 +32,14 @@ public class MainWindow : Window
     private const int _DefaultPlayerHeight = 250;
     private const int _PianoMinHeight = 100;
     private const int _PlayerMinHeight = 80;
+    private const string _DropMidiLabel = "Load this MIDI file";
+    private const string _DropSoundFontLabel = "Load this SoundFont file";
 
     private readonly KeyboardInputHandler _keyboardInput;
     private readonly IMidiFileLoader _midiFileLoader;
     private readonly ISoundFontFileLoader _soundFontFileLoader;
+    private readonly Border _dropOverlay;
+    private readonly TextBlock _dropOverlayLabel;
 
     public MainWindow(
         KeyboardInputHandler keyboardInput,
@@ -96,7 +104,7 @@ public class MainWindow : Window
         Grid.SetRow(settingsSplitter.Visual, 2);
         Grid.SetRow(settingsPanel, 3);
 
-        Content = new Grid
+        Grid mainGrid = new()
         {
             RowDefinitions = { playerRow, pianoSectionRow, settingsSplitterRow, settingsRow },
             Children =
@@ -108,6 +116,33 @@ public class MainWindow : Window
                 settingsPanel,
             },
         };
+
+        // Drop overlay: translucent backdrop with a dashed accent frame and a centered label, hidden by default.
+        // IsHitTestVisible=false lets drag events pass through to the window's DragOver/Drop handlers.
+        _dropOverlayLabel = new TextBlock
+        {
+            FontSize = 28,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(ThemePaletteProvider.TextPrimary),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Rectangle dashedFrame = new()
+        {
+            Stroke = new SolidColorBrush(ThemePaletteProvider.TextPrimary),
+            StrokeThickness = 4,
+            StrokeDashArray = [6, 4],
+            Margin = new Thickness(2),
+        };
+        _dropOverlay = new Border
+        {
+            Background = new SolidColorBrush(ThemePaletteProvider.AppBackground) { Opacity = 0.7 },
+            IsHitTestVisible = false,
+            IsVisible = false,
+            Child = new Grid { Children = { dashedFrame, _dropOverlayLabel } },
+        };
+
+        Content = new Panel { Children = { mainGrid, _dropOverlay } };
 
         CollapsibleSection playerSection = new(
             content: playerView,
@@ -149,19 +184,37 @@ public class MainWindow : Window
         // Drag-and-drop: window-wide, accepts only .mid/.midi/.sf2/.sf3.
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
     }
 
-    private static void OnDragOver(object? sender, DragEventArgs e)
+    private void OnDragOver(object? sender, DragEventArgs e)
     {
+        string? path = TryFindSupportedFile(e);
         // Setting None tells the OS to show the no-drop cursor for unsupported file types.
-        e.DragEffects = TryFindSupportedFile(e) is not null ? DragDropEffects.Copy : DragDropEffects.None;
+        e.DragEffects = path is not null ? DragDropEffects.Copy : DragDropEffects.None;
+        if (path is not null)
+        {
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            _dropOverlayLabel.Text = ext is ".mid" or ".midi" ? _DropMidiLabel : _DropSoundFontLabel;
+            _dropOverlay.IsVisible = true;
+        }
+        else
+        {
+            _dropOverlay.IsVisible = false;
+        }
         e.Handled = true;
+    }
+
+    private void OnDragLeave(object? sender, RoutedEventArgs e)
+    {
+        _dropOverlay.IsVisible = false;
     }
 
     private async void OnDrop(object? sender, DragEventArgs e)
     {
         e.Handled = true;
+        _dropOverlay.IsVisible = false;
         string? path = TryFindSupportedFile(e);
         if (path is null)
         {
