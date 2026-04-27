@@ -15,6 +15,16 @@ namespace Klavier.UI.Views;
 
 public partial class SettingsPanel
 {
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _SubtextBrush = new(ThemePaletteProvider.TextPrimary) { Opacity = 0.7 };
+    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
+    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
+    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
+    private const double _LabelWidth = 130;
+    private const double _ValueWidth = 40;
+    private const double _MinRowHeight = 32;
+    private const double _RowIndent = 20;
+
     private const string _SoundFontPickerTitle = "Choose a SoundFont file";
 
     private static DockPanel CreateRow(string label, Control control, string? tooltip = null)
@@ -257,17 +267,14 @@ public partial class SettingsPanel
         return new IconButton(pencilGeometry);
     }
 
-    private void WireKeybindsEditorButton(
-        IconButton button,
-        IOptionsMonitor<UIConfig> uiConfig,
-        bool useCurrentLayoutName)
+    private void WireKeybindsEditorButton(IconButton button, bool useCurrentLayoutName)
     {
         button.PointerPressed += async (_, e) =>
         {
             e.Handled = true;
             try
             {
-                await OpenKeybindsEditor(uiConfig, useCurrentLayoutName);
+                await OpenKeybindsEditor(useCurrentLayoutName);
             }
             finally
             {
@@ -276,9 +283,9 @@ public partial class SettingsPanel
         };
     }
 
-    private async Task OpenKeybindsEditor(IOptionsMonitor<UIConfig> uiConfig, bool useCurrentLayoutName)
+    private async Task OpenKeybindsEditor(bool useCurrentLayoutName)
     {
-        string currentLayout = uiConfig.CurrentValue.KeyboardLayout;
+        string currentLayout = _uiConfig.CurrentValue.KeyboardLayout;
         KeyboardMapping clone = KeyboardMappingProvider.Load(currentLayout);
         string? existingLayoutName = useCurrentLayoutName ? currentLayout : null;
         KeybindsEditorWindow editor = _createKeybindsEditor(clone, existingLayoutName);

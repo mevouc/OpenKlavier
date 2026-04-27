@@ -23,16 +23,6 @@ namespace Klavier.UI.Views;
 
 public partial class SettingsPanel : Border
 {
-    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
-    private static readonly SolidColorBrush _SubtextBrush = new(ThemePaletteProvider.TextPrimary) { Opacity = 0.7 };
-    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
-    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
-    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
-    private const double _LabelWidth = 130;
-    private const double _ValueWidth = 40;
-    private const double _MinRowHeight = 32;
-    private const double _RowIndent = 20;
-
     private const string _VelocityLabel = "Velocity";
     private const string _TransposeLabel = "Transpose";
     private const string _VolumeLabel = "Volume";
@@ -74,6 +64,12 @@ public partial class SettingsPanel : Border
     private const string _ThemeSectionTitle = "Theme & Colors";
 
     private readonly IUserSettingsService _settingsService;
+    private readonly ISoundFontInfoProvider _soundFontInfoProvider;
+    private readonly ISoundFontFileLoader _soundFontFileLoader;
+    private readonly IOptionsMonitor<PianoConfig> _pianoConfig;
+    private readonly IOptionsMonitor<AudioConfig> _audioConfig;
+    private readonly IOptionsMonitor<PlayerConfig> _playerConfig;
+    private readonly IOptionsMonitor<UIConfig> _uiConfig;
     private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
 
     public SettingsPanel(
@@ -87,164 +83,18 @@ public partial class SettingsPanel : Border
         Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor)
     {
         _settingsService = settingsService;
+        _soundFontInfoProvider = soundFontInfoProvider;
+        _soundFontFileLoader = soundFontFileLoader;
+        _pianoConfig = pianoConfig;
+        _audioConfig = audioConfig;
+        _playerConfig = playerConfig;
+        _uiConfig = uiConfig;
         _createKeybindsEditor = createKeybindsEditor;
 
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(12, 8);
         IsVisible = false;
 
-        PianoConfig piano = pianoConfig.CurrentValue;
-        AudioConfig audio = audioConfig.CurrentValue;
-        PlayerConfig player = playerConfig.CurrentValue;
-        UIConfig ui = uiConfig.CurrentValue;
-
-        Slider velocitySlider = CreateSlider(NoteVelocity.MinValue, NoteVelocity.MaxValue, piano.Velocity);
-        TextBlock velocityValue = CreateValueLabel(piano.Velocity.ToString());
-
-        Slider transposeSlider = CreateSlider(Transpose.MinValue, Transpose.MaxValue, piano.Transpose);
-        TextBlock transposeValue = CreateValueLabel(piano.Transpose.ToString());
-
-        Slider volumeSlider = CreateSlider(0, 120, audio.VolumeInPercent);
-        TextBlock volumeValue = CreateValueLabel($"{audio.VolumeInPercent}%");
-
-        Slider tempoSlider = CreateSlider(25, 200, (int)Math.Round(player.TempoMultiplier * 100));
-        TextBlock tempoValue = CreateValueLabel($"{player.TempoMultiplier:0.00}x");
-
-        Slider lookaheadSlider = CreateSlider(1, 10, player.LookaheadSeconds);
-        TextBlock lookaheadValue = CreateValueLabel($"{player.LookaheadSeconds} s");
-
-        ComboBox sustainModeCombo = CreateComboBox(ui.SustainMode);
-        sustainModeCombo.ItemTemplate = new FuncDataTemplate<SustainMode>((mode, _) => new TextBlock
-        {
-            Text = mode switch
-            {
-                SustainMode.InvertedHold => "Inverted hold",
-                _ => mode.ToString(),
-            },
-        });
-        ToggleSwitch topmostToggle = CreateToggleSwitch(ui.Topmost);
-        ToggleSwitch keyLabelsToggle = CreateToggleSwitch(ui.ShowKeyLabels);
-        ToggleSwitch noteLabelsToggle = CreateToggleSwitch(ui.ShowNoteLabels);
-        ComboBox noteNameStyleCombo = CreateComboBox(ui.NoteNameStyle);
-        ComboBox themeCombo = CreateComboBox(ui.Theme);
-        ComboBox keyboardLayoutCombo = CreateComboBox(
-            KeyboardMappingProvider.GetAvailableLayouts(),
-            ui.KeyboardLayout);
-        IconButton createLayoutButton = CreatePlusIconButton();
-        IconButton editLayoutButton = CreatePencilIconButton();
-        StackPanel keyboardLayoutRow = new()
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 4,
-            Children = { keyboardLayoutCombo, createLayoutButton, editLayoutButton },
-        };
-        WireKeybindsEditorButton(createLayoutButton, uiConfig, useCurrentLayoutName: false);
-        WireKeybindsEditorButton(editLayoutButton, uiConfig, useCurrentLayoutName: true);
-
-        SoundFontInfo soundFontInfo = soundFontInfoProvider.GetSoundFontInfo();
-        ComboBox presetCombo = CreateComboBox(soundFontInfo.Presets.Values, FindPreset(soundFontInfo.Presets, audio.SoundFont.Preset));
-
-        FilePathPicker soundFontPicker = new(
-            _SoundFontPickerTitle,
-            _SoundFontTooltip,
-            new FilePickerFileType("SoundFont") { Patterns = ["*.sf2", "*.sf3"] },
-            () => audioConfig.CurrentValue.SoundFont.Path,
-            () => soundFontInfoProvider.GetSoundFontInfo().Name,
-            soundFontFileLoader.TryLoadAsync);
-
-        TextBox accentHexTextBox = CreateHexColorTextBox(UserPalette.Accent);
-        TextBox whiteKeyHexTextBox = CreateHexColorTextBox(UserPalette.WhiteKey);
-        TextBox blackKeyHexTextBox = CreateHexColorTextBox(UserPalette.BlackKey);
-        TextBox keyBorderHexTextBox = CreateHexColorTextBox(UserPalette.KeyBorder);
-
-        // Wire sliders
-        WireSlider(velocitySlider, velocityValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
-        WireSlider(transposeSlider, transposeValue, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
-        WireSlider(volumeSlider, volumeValue, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
-        WireSlider(lookaheadSlider, lookaheadValue, ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.LookaheadSeconds)), val => $"{val} s");
-        // Tempo: slider is 25-200 (percent), config stores 0.25-2.0 (multiplier).
-        tempoSlider.ValueChanged += (_, e) =>
-        {
-            int percent = (int)e.NewValue;
-            double tempo = percent / 100.0;
-            tempoValue.Text = $"{tempo:0.00}x";
-            _settingsService.UpdateSetting(
-                ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.TempoMultiplier)),
-                tempo);
-        };
-
-        // Wire dropdowns
-        WireComboBox(sustainModeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.SustainMode)));
-        WireComboBox(noteNameStyleCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.NoteNameStyle)));
-        WireComboBox(themeCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
-        WireComboBox(keyboardLayoutCombo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
-        WirePresetComboBox(presetCombo, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Preset)));
-
-        // Wire toggles
-        WireToggle(topmostToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
-        WireToggle(keyLabelsToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels)));
-        WireToggle(noteLabelsToggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels)));
-
-        // Wire color hex textboxes
-        WireHexColorTextBox(accentHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.Accent)));
-        WireHexColorTextBox(whiteKeyHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.WhiteKey)));
-        WireHexColorTextBox(blackKeyHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.BlackKey)));
-        WireHexColorTextBox(keyBorderHexTextBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.KeyBorder)));
-
-        // Sync controls when config reloads (covers reset + external changes)
-        pianoConfig.OnChange(newPiano => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            velocitySlider.Value = newPiano.Velocity;
-            transposeSlider.Value = newPiano.Transpose;
-        }));
-
-        audioConfig.OnChange(newAudio => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            volumeSlider.Value = newAudio.VolumeInPercent;
-            SoundFontPreset? preset = FindPreset(soundFontInfoProvider.GetSoundFontInfo().Presets, newAudio.SoundFont.Preset);
-            if (preset.HasValue)
-            {
-                presetCombo.SelectedItem = preset.Value;
-            }
-        }));
-
-        playerConfig.OnChange(newPlayer => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            tempoSlider.Value = (int)Math.Round(newPlayer.TempoMultiplier * 100);
-            lookaheadSlider.Value = newPlayer.LookaheadSeconds;
-        }));
-
-        soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            SoundFontInfo updatedInfo = soundFontInfoProvider.GetSoundFontInfo();
-            presetCombo.ItemsSource = updatedInfo.Presets.Values;
-            SoundFontPreset? preset = FindPreset(updatedInfo.Presets, audioConfig.CurrentValue.SoundFont.Preset);
-            if (preset.HasValue)
-            {
-                presetCombo.SelectedItem = preset.Value;
-            }
-            soundFontPicker.Refresh();
-        });
-
-        uiConfig.OnChange(newUi => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            sustainModeCombo.SelectedItem = newUi.SustainMode;
-            topmostToggle.IsChecked = newUi.Topmost;
-            keyLabelsToggle.IsChecked = newUi.ShowKeyLabels;
-            noteLabelsToggle.IsChecked = newUi.ShowNoteLabels;
-            noteNameStyleCombo.SelectedItem = newUi.NoteNameStyle;
-            themeCombo.SelectedItem = newUi.Theme;
-            keyboardLayoutCombo.SelectedItem = newUi.KeyboardLayout;
-        }));
-
-        KeyboardMappingProvider.LayoutsChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-        {
-            string? currentSelection = keyboardLayoutCombo.SelectedItem as string;
-            keyboardLayoutCombo.ItemsSource = KeyboardMappingProvider.GetAvailableLayouts();
-            keyboardLayoutCombo.SelectedItem = currentSelection;
-        });
-
-        // Wire reset
         TextButton resetButton = new(_ResetDefaultsButtonLabel);
         resetButton.PointerPressed += (_, e) =>
         {
@@ -262,32 +112,32 @@ public partial class SettingsPanel : Border
                 Children =
                 {
                     CreateSectionHeader(_SoundSectionTitle),
-                    CreateRow(_VelocityLabel, velocityValue, velocitySlider, tooltip: _VelocityTooltip),
-                    CreateRow(_TransposeLabel, transposeValue, transposeSlider, tooltip: _TransposeTooltip),
-                    CreateRow(_VolumeLabel, volumeValue, volumeSlider),
-                    CreateRow(_TempoLabel, tempoValue, tempoSlider, tooltip: _TempoTooltip),
-                    CreateRow(_LookaheadLabel, lookaheadValue, lookaheadSlider, tooltip: _LookaheadTooltip),
-                    CreateRow(_SustainModeLabel, sustainModeCombo, tooltip: _SustainModeTooltip),
-                    CreateRow(_SoundFontLabel, soundFontPicker, tooltip: _SoundFontTooltip),
-                    CreateRow(_PresetLabel, presetCombo, tooltip: _PresetTooltip),
+                    BuildVelocityRow(),
+                    BuildTransposeRow(),
+                    BuildVolumeRow(),
+                    BuildTempoRow(),
+                    BuildLookaheadRow(),
+                    BuildSustainModeRow(),
+                    BuildSoundFontRow(),
+                    BuildPresetRow(),
 
                     CreateSectionHeader(_PianoDisplaySectionTitle),
-                    CreateRow(_ShowKeyLabelsLabel, keyLabelsToggle, tooltip: _ShowKeyLabelsTooltip),
-                    CreateRow(_ShowNoteLabelsLabel, noteLabelsToggle, tooltip: _ShowNoteLabelsTooltip),
-                    CreateRow(_NoteNameStyleLabel, noteNameStyleCombo, tooltip: _NoteNameStyleTooltip),
+                    BuildShowKeyLabelsRow(),
+                    BuildShowNoteLabelsRow(),
+                    BuildNoteNameStyleRow(),
 
                     CreateSectionHeader(_ThemeSectionTitle, "(requires restart)"),
-                    CreateRow(_ThemeLabel, themeCombo),
-                    CreateRow(_AccentLabel, accentHexTextBox, tooltip: _AccentTooltip),
-                    CreateRow(_WhiteKeyLabel, whiteKeyHexTextBox),
-                    CreateRow(_BlackKeyLabel, blackKeyHexTextBox),
-                    CreateRow(_KeyBorderLabel, keyBorderHexTextBox, tooltip: _KeyBorderTooltip),
+                    BuildThemeRow(),
+                    BuildAccentColorRow(),
+                    BuildWhiteKeyColorRow(),
+                    BuildBlackKeyColorRow(),
+                    BuildKeyBorderColorRow(),
 
                     CreateSectionHeader(_WindowSectionTitle),
-                    CreateRow(_TopmostLabel, topmostToggle),
+                    BuildTopmostRow(),
 
                     CreateSectionHeader(_KeyboardSectionTitle),
-                    CreateRow(_KeyboardLayoutLabel, keyboardLayoutRow, tooltip: _KeyboardLayoutTooltip),
+                    BuildKeyboardLayoutRow(),
 
                     CreateResetRow(resetButton),
                 },
@@ -298,5 +148,213 @@ public partial class SettingsPanel : Border
             (_, e) => e.Handled = true,
             handledEventsToo: true);
         Child = scrollViewer;
+    }
+
+    private DockPanel BuildVelocityRow()
+    {
+        int initialValue = _pianoConfig.CurrentValue.Velocity;
+        Slider slider = CreateSlider(NoteVelocity.MinValue, NoteVelocity.MaxValue, initialValue);
+        TextBlock value = CreateValueLabel(initialValue.ToString());
+        WireSlider(slider, value, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
+        _pianoConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.Velocity));
+        return CreateRow(_VelocityLabel, value, slider, tooltip: _VelocityTooltip);
+    }
+
+    private DockPanel BuildTransposeRow()
+    {
+        int initialValue = _pianoConfig.CurrentValue.Transpose;
+        Slider slider = CreateSlider(Transpose.MinValue, Transpose.MaxValue, initialValue);
+        TextBlock value = CreateValueLabel(initialValue.ToString());
+        WireSlider(slider, value, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
+        _pianoConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.Transpose));
+        return CreateRow(_TransposeLabel, value, slider, tooltip: _TransposeTooltip);
+    }
+
+    private DockPanel BuildVolumeRow()
+    {
+        ushort initialValue = _audioConfig.CurrentValue.VolumeInPercent;
+        Slider slider = CreateSlider(0, 120, initialValue);
+        TextBlock value = CreateValueLabel($"{initialValue}%");
+        WireSlider(slider, value, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
+        _audioConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.VolumeInPercent));
+        return CreateRow(_VolumeLabel, value, slider);
+    }
+
+    private DockPanel BuildTempoRow()
+    {
+        // Slider is 25-200 (percent), config stores 0.25-2.0 (multiplier).
+        double initialMultiplier = _playerConfig.CurrentValue.TempoMultiplier;
+        Slider slider = CreateSlider(25, 200, (int)Math.Round(initialMultiplier * 100));
+        TextBlock value = CreateValueLabel($"{initialMultiplier:0.00}x");
+        slider.ValueChanged += (_, e) =>
+        {
+            int percent = (int)e.NewValue;
+            double tempo = percent / 100.0;
+            value.Text = $"{tempo:0.00}x";
+            _settingsService.UpdateSetting(
+                ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.TempoMultiplier)),
+                tempo);
+        };
+        _playerConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(
+            () => slider.Value = (int)Math.Round(c.TempoMultiplier * 100)));
+        return CreateRow(_TempoLabel, value, slider, tooltip: _TempoTooltip);
+    }
+
+    private DockPanel BuildLookaheadRow()
+    {
+        int initialValue = _playerConfig.CurrentValue.LookaheadSeconds;
+        Slider slider = CreateSlider(1, 10, initialValue);
+        TextBlock value = CreateValueLabel($"{initialValue} s");
+        WireSlider(slider, value, ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.LookaheadSeconds)), val => $"{val} s");
+        _playerConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.LookaheadSeconds));
+        return CreateRow(_LookaheadLabel, value, slider, tooltip: _LookaheadTooltip);
+    }
+
+    private DockPanel BuildSustainModeRow()
+    {
+        ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.SustainMode);
+        combo.ItemTemplate = new FuncDataTemplate<SustainMode>((mode, _) => new TextBlock
+        {
+            Text = mode switch
+            {
+                SustainMode.InvertedHold => "Inverted hold",
+                _ => mode.ToString(),
+            },
+        });
+        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.SustainMode)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.SustainMode));
+        return CreateRow(_SustainModeLabel, combo, tooltip: _SustainModeTooltip);
+    }
+
+    private DockPanel BuildSoundFontRow()
+    {
+        FilePathPicker picker = new(
+            _SoundFontPickerTitle,
+            _SoundFontTooltip,
+            new FilePickerFileType("SoundFont") { Patterns = ["*.sf2", "*.sf3"] },
+            () => _audioConfig.CurrentValue.SoundFont.Path,
+            () => _soundFontInfoProvider.GetSoundFontInfo().Name,
+            _soundFontFileLoader.TryLoadAsync);
+        _soundFontInfoProvider.SoundFontInfoChanged += () =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(picker.Refresh);
+        return CreateRow(_SoundFontLabel, picker, tooltip: _SoundFontTooltip);
+    }
+
+    private DockPanel BuildPresetRow()
+    {
+        SoundFontInfo info = _soundFontInfoProvider.GetSoundFontInfo();
+        ComboBox combo = CreateComboBox(info.Presets.Values, FindPreset(info.Presets, _audioConfig.CurrentValue.SoundFont.Preset));
+        WirePresetComboBox(combo, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Preset)));
+        _audioConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            SoundFontPreset? preset = FindPreset(_soundFontInfoProvider.GetSoundFontInfo().Presets, c.SoundFont.Preset);
+            if (preset.HasValue)
+            {
+                combo.SelectedItem = preset.Value;
+            }
+        }));
+        _soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            SoundFontInfo updatedInfo = _soundFontInfoProvider.GetSoundFontInfo();
+            combo.ItemsSource = updatedInfo.Presets.Values;
+            SoundFontPreset? preset = FindPreset(updatedInfo.Presets, _audioConfig.CurrentValue.SoundFont.Preset);
+            if (preset.HasValue)
+            {
+                combo.SelectedItem = preset.Value;
+            }
+        });
+        return CreateRow(_PresetLabel, combo, tooltip: _PresetTooltip);
+    }
+
+    private DockPanel BuildShowKeyLabelsRow()
+    {
+        ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.ShowKeyLabels);
+        WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => toggle.IsChecked = c.ShowKeyLabels));
+        return CreateRow(_ShowKeyLabelsLabel, toggle, tooltip: _ShowKeyLabelsTooltip);
+    }
+
+    private DockPanel BuildShowNoteLabelsRow()
+    {
+        ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.ShowNoteLabels);
+        WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => toggle.IsChecked = c.ShowNoteLabels));
+        return CreateRow(_ShowNoteLabelsLabel, toggle, tooltip: _ShowNoteLabelsTooltip);
+    }
+
+    private DockPanel BuildNoteNameStyleRow()
+    {
+        ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.NoteNameStyle);
+        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.NoteNameStyle)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.NoteNameStyle));
+        return CreateRow(_NoteNameStyleLabel, combo, tooltip: _NoteNameStyleTooltip);
+    }
+
+    private DockPanel BuildThemeRow()
+    {
+        ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.Theme);
+        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.Theme));
+        return CreateRow(_ThemeLabel, combo);
+    }
+
+    private DockPanel BuildAccentColorRow()
+    {
+        TextBox textBox = CreateHexColorTextBox(UserPalette.Accent);
+        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.Accent)));
+        return CreateRow(_AccentLabel, textBox, tooltip: _AccentTooltip);
+    }
+
+    private DockPanel BuildWhiteKeyColorRow()
+    {
+        TextBox textBox = CreateHexColorTextBox(UserPalette.WhiteKey);
+        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.WhiteKey)));
+        return CreateRow(_WhiteKeyLabel, textBox);
+    }
+
+    private DockPanel BuildBlackKeyColorRow()
+    {
+        TextBox textBox = CreateHexColorTextBox(UserPalette.BlackKey);
+        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.BlackKey)));
+        return CreateRow(_BlackKeyLabel, textBox);
+    }
+
+    private DockPanel BuildKeyBorderColorRow()
+    {
+        TextBox textBox = CreateHexColorTextBox(UserPalette.KeyBorder);
+        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.KeyBorder)));
+        return CreateRow(_KeyBorderLabel, textBox, tooltip: _KeyBorderTooltip);
+    }
+
+    private DockPanel BuildTopmostRow()
+    {
+        ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.Topmost);
+        WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => toggle.IsChecked = c.Topmost));
+        return CreateRow(_TopmostLabel, toggle);
+    }
+
+    private DockPanel BuildKeyboardLayoutRow()
+    {
+        ComboBox combo = CreateComboBox(KeyboardMappingProvider.GetAvailableLayouts(), _uiConfig.CurrentValue.KeyboardLayout);
+        IconButton createLayoutButton = CreatePlusIconButton();
+        IconButton editLayoutButton = CreatePencilIconButton();
+        StackPanel layoutRow = new()
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            Children = { combo, createLayoutButton, editLayoutButton },
+        };
+        WireKeybindsEditorButton(createLayoutButton, useCurrentLayoutName: false);
+        WireKeybindsEditorButton(editLayoutButton, useCurrentLayoutName: true);
+        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
+        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.KeyboardLayout));
+        KeyboardMappingProvider.LayoutsChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            string? currentSelection = combo.SelectedItem as string;
+            combo.ItemsSource = KeyboardMappingProvider.GetAvailableLayouts();
+            combo.SelectedItem = currentSelection;
+        });
+        return CreateRow(_KeyboardLayoutLabel, layoutRow, tooltip: _KeyboardLayoutTooltip);
     }
 }
