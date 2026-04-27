@@ -21,6 +21,7 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
     private readonly ILogger<FluidSynthAudioOutput> _logger;
     // Kept rooted: NFluidsynth stores a raw function pointer native-side, so the delegate must survive GC.
     private readonly Logger.LoggerDelegate _fluidSynthLoggerDelegate;
+    private readonly IDisposable? _configSubscription;
     private AudioConfig _lastAudioConfig;
     private Synth? _synth;
     private AudioDriver? _audioDriver;
@@ -41,7 +42,7 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
         _logger = logger;
 
         _lastAudioConfig = _audioConfig.CurrentValue;
-        _audioConfig.OnChange(OnAudioConfigChanged); // dynamically update volume/gain
+        _configSubscription = _audioConfig.OnChange(OnAudioConfigChanged); // dynamically update volume/gain
 
         _fluidSynthLoggerDelegate = CreateFluidSynthLoggerDelegate();
         Logger.SetLoggerMethod(_fluidSynthLoggerDelegate);
@@ -193,6 +194,7 @@ public class FluidSynthAudioOutput : IAudioOutput, ISoundFontInfoProvider
         {
             if (disposing)
             {
+                _configSubscription?.Dispose();
                 _audioDriver?.Dispose();
                 _synth?.Dispose();
                 _synthSettings.Dispose();
