@@ -5,9 +5,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Klavier.Config;
+using Klavier.Config.Schema;
+using Klavier.Config.UserSettings;
 using Klavier.Midi;
-using Klavier.Midi.Player;
-using Klavier.UI.Ports;
+using Klavier.Midi.Playback;
 using Klavier.UI.Views.Controls;
 
 namespace Klavier.UI.Views.Player;

@@ -1,6 +1,6 @@
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Ports;
-using Klavier.SoundFont;
+using Klavier.SoundFont.Ports;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

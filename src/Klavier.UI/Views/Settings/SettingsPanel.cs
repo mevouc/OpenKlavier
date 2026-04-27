@@ -5,10 +5,13 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Klavier.Config;
+using Klavier.Config.Schema;
+using Klavier.Config.UserSettings;
 using Klavier.Core.Primitives;
 using Klavier.SoundFont;
+using Klavier.SoundFont.Loading;
+using Klavier.SoundFont.Ports;
 using Klavier.UI.Input.Mapping;
-using Klavier.UI.Ports;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings;
@@ -72,21 +75,19 @@ public partial class SettingsPanel : Border
 
     private readonly IUserSettingsService _settingsService;
     private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
-    private readonly ILogger<SettingsPanel> _logger;
 
     public SettingsPanel(
         IUserSettingsService settingsService,
         ISoundFontInfoProvider soundFontInfoProvider,
+        ISoundFontFileLoader soundFontFileLoader,
         IOptionsMonitor<PianoConfig> pianoConfig,
         IOptionsMonitor<AudioConfig> audioConfig,
         IOptionsMonitor<PlayerConfig> playerConfig,
         IOptionsMonitor<UIConfig> uiConfig,
-        Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor,
-        ILogger<SettingsPanel> logger)
+        Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor)
     {
         _settingsService = settingsService;
         _createKeybindsEditor = createKeybindsEditor;
-        _logger = logger;
 
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(12, 8);
@@ -149,7 +150,7 @@ public partial class SettingsPanel : Border
             new FilePickerFileType("SoundFont") { Patterns = ["*.sf2", "*.sf3"] },
             () => audioConfig.CurrentValue.SoundFont.Path,
             () => soundFontInfoProvider.GetSoundFontInfo().Name,
-            newPath => HandleSoundFontPath(newPath, audioConfig));
+            soundFontFileLoader.TryLoadAsync);
 
         TextBox accentHexTextBox = CreateHexColorTextBox(UserPalette.Accent);
         TextBox whiteKeyHexTextBox = CreateHexColorTextBox(UserPalette.WhiteKey);

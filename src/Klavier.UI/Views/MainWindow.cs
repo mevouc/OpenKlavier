@@ -3,8 +3,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Klavier.UI.Input;
-using Klavier.Config;
+using Klavier.Config.Schema;
+using Klavier.Midi.Loading;
+using Klavier.SoundFont.Loading;
 using Klavier.UI.Theme;
 using Microsoft.Extensions.Options;
 using Klavier.UI.Views.Piano;
@@ -27,6 +30,8 @@ public class MainWindow : Window
     private const int _PlayerMinHeight = 80;
 
     private readonly KeyboardInputHandler _keyboardInput;
+    private readonly IMidiFileLoader _midiFileLoader;
+    private readonly ISoundFontFileLoader _soundFontFileLoader;
 
     public MainWindow(
         KeyboardInputHandler keyboardInput,
@@ -34,9 +39,13 @@ public class MainWindow : Window
         PlayerView playerView,
         ToolbarView toolbarView,
         SettingsPanel settingsPanel,
+        IMidiFileLoader midiFileLoader,
+        ISoundFontFileLoader soundFontFileLoader,
         IOptionsMonitor<UIConfig> uiConfig)
     {
         _keyboardInput = keyboardInput;
+        _midiFileLoader = midiFileLoader;
+        _soundFontFileLoader = soundFontFileLoader;
 
         Title = _WindowTitle;
         Width = _DefaultWidth;
@@ -136,6 +145,54 @@ public class MainWindow : Window
                 Focus();
             }
         }, RoutingStrategies.Tunnel);
+
+        // Drag-and-drop: window-wide, accepts only .mid/.midi/.sf2/.sf3.
+        DragDrop.SetAllowDrop(this, true);
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
+    }
+
+    private static void OnDragOver(object? sender, DragEventArgs e)
+    {
+        // Setting None tells the OS to show the no-drop cursor for unsupported file types.
+        e.DragEffects = TryFindSupportedFile(e) is not null ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void OnDrop(object? sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        string? path = TryFindSupportedFile(e);
+        if (path is null)
+        {
+            return;
+        }
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        if (ext is ".mid" or ".midi")
+        {
+            await _midiFileLoader.TryLoadAsync(path);
+        }
+        else if (ext is ".sf2" or ".sf3")
+        {
+            await _soundFontFileLoader.TryLoadAsync(path);
+        }
+    }
+
+    private static string? TryFindSupportedFile(DragEventArgs e)
+    {
+        IStorageItem[]? files = e.DataTransfer.TryGetFiles();
+        if (files is null || files.Length > 1)
+        {
+            return null;
+        }
+
+        string path = files[0].Path.LocalPath;
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        if (ext is ".mid" or ".midi" or ".sf2" or ".sf3")
+        {
+            return path;
+        }
+        return null;
     }
 
     private static Grid CreatePianoSeparator()

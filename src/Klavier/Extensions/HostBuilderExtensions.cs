@@ -1,31 +1,18 @@
-using Klavier.UI.Ports;
-using Klavier.Services;
+using Klavier.Audio;
+using Klavier.Config;
+using Klavier.Config.UserSettings;
+using Klavier.Core;
+using Klavier.Midi;
+using Klavier.SoundFont;
+using Klavier.UI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Klavier.Audio;
-using Klavier.Core;
-using Klavier.UI;
-using Klavier.Midi;
 
 namespace Klavier.Extensions;
 
 public static class HostBuilderExtensions
 {
-    public static IHostBuilder ConfigureAppServices(this IHostBuilder builder)
-    {
-        return builder.ConfigureServices((context, services) =>
-        {
-            IConfiguration configuration = context.Configuration;
-
-            services.AddPianoEngine(configuration);
-            services.AddFluidSynthAudio(configuration);
-            services.AddMidi(configuration);
-            services.AddSingleton<MidiPlaybackCoordinator>();
-            services.AddUI(configuration);
-        });
-    }
-
     public static IHostBuilder UseUserSettings(this IHostBuilder builder, string appName)
     {
         return builder
@@ -38,7 +25,20 @@ public static class HostBuilderExtensions
                     optional: true,
                     reloadOnChange: true);
             })
-            .ConfigureServices((_, services) =>
-                services.AddSingleton<IUserSettingsService>(new UserSettingsService(appName)));
+            .ConfigureServices((_, services) => services.AddUserSettings(appName));
+    }
+
+    public static IHostBuilder ConfigureAppServices(this IHostBuilder builder)
+    {
+        return builder.ConfigureServices((context, services) =>
+        {
+            IConfiguration configuration = context.Configuration;
+
+            services.AddPianoEngine(configuration);
+            services.AddFluidSynthAudio(configuration);
+            services.AddMidi(configuration);
+            services.AddSoundFont();
+            services.AddUI(configuration);
+        });
     }
 }

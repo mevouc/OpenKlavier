@@ -1,10 +1,9 @@
 using Avalonia;
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Engine;
 using Klavier.Core.Ports;
-using Klavier.Midi;
-using Klavier.Midi.Player;
-using Klavier.Midi.Ports;
+using Klavier.Midi.Loading;
+using Klavier.Midi.Playback;
 using Klavier.Services;
 using Klavier.UI;
 using Klavier.UI.Theme;
@@ -23,10 +22,10 @@ public static class HostExtensions
     {
         // Heal any user-settings values that point at missing files or otherwise-invalid state.
         // Must run before any consumer (e.g. PianoViewModel) reads KeyboardLayout / SoundFont.Path.
-        StartupConfigValidator.ValidateAndHeal(
+        StartupConfigValidationService.ValidateAndHeal(
             host.Services,
             host.Services.GetRequiredService<ILoggerFactory>()
-                .CreateLogger(nameof(StartupConfigValidator)));
+                .CreateLogger(nameof(StartupConfigValidationService)));
         return host;
     }
 
@@ -55,29 +54,13 @@ public static class HostExtensions
 
     public static IHost AutoLoadMidi(this IHost host)
     {
-        // Auto-load the MIDI file persisted in PlayerConfig.Path, if any
+        // Auto-load the MIDI file persisted in PlayerConfig.Path, if any.
         string path = host.Services.GetRequiredService<IOptions<PlayerConfig>>().Value.Path;
         if (string.IsNullOrEmpty(path))
         {
             return host;
         }
-
-        IMidiScoreLoader loader = host.Services.GetRequiredService<IMidiScoreLoader>();
-        IMidiPlayer player = host.Services.GetRequiredService<IMidiPlayer>();
-        ILogger logger = host.Services
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger(nameof(HostExtensions));
-
-        try
-        {
-            MidiScore score = loader.LoadAsync(path).GetAwaiter().GetResult();
-            player.Load(score);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to auto-load MIDI file {Path}", path);
-        }
-
+        host.Services.GetRequiredService<IMidiFileLoader>().TryLoadAsync(path).GetAwaiter().GetResult();
         return host;
     }
 
@@ -105,7 +88,7 @@ public static class HostExtensions
         }
         catch (Exception e)
         {
-            ILogger<Program> logger = host.Services.GetRequiredService<ILogger<Program>>();
+            ILogger<App> logger = host.Services.GetRequiredService<ILogger<App>>();
 
             logger.LogError(e, "Unhandled exception: {Message}", e.Message);
 

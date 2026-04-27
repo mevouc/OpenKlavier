@@ -1,4 +1,4 @@
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Engine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

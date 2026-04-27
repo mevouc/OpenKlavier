@@ -1,5 +1,5 @@
 using Klavier.Core.Events;
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Ports;
 using Klavier.Core.Primitives;
 using Microsoft.Extensions.Logging;

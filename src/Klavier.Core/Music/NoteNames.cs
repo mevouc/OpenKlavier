@@ -1,4 +1,4 @@
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Primitives;
 
 namespace Klavier.Core.Music;

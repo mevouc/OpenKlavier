@@ -3,13 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.SoundFont;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings.KeybindsEditor;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -293,47 +292,6 @@ public partial class SettingsPanel
         {
             editor.Show();
         }
-    }
-
-    private async Task<bool> HandleSoundFontPath(string newPath, IOptionsMonitor<AudioConfig> audioConfig)
-    {
-        SoundFontInfo newInfo;
-        try
-        {
-            newInfo = SoundFontParser.ParseInfo(newPath);
-        }
-        catch (InvalidDataException ex)
-        {
-            _logger.LogWarning(ex, "Failed to load SoundFont file {Path}", newPath);
-            return false;
-        }
-
-        SoundFontConfig soundFontConfig = audioConfig.CurrentValue.SoundFont;
-        (int newBank, int newProgram) = DetermineNewPreset(newInfo.Presets, soundFontConfig.Preset);
-
-        _settingsService.UpdateSetting(
-            ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont)),
-            new { Path = newPath, Preset = new { newBank, newProgram } });
-
-        return true;
-    }
-
-    // Keep the current (Bank, Program) if still present in the new SF; otherwise pick (0, 0)
-    // when available, else the lowest available preset key.
-    private static (int Bank, int Program) DetermineNewPreset(
-        IReadOnlyDictionary<(int Bank, int Program), SoundFontPreset> presets,
-        SoundFontPresetConfig current)
-    {
-        (int Bank, int Program) currentKey = (current.Bank, current.Program);
-        if (presets.ContainsKey(currentKey))
-        {
-            return currentKey;
-        }
-        if (presets.ContainsKey((0, 0)) || presets.Count == 0)
-        {
-            return (0, 0);
-        }
-        return presets.Keys.Min();
     }
 
     private static TextBox CreateHexColorTextBox(Color initialColor)

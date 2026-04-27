@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.UI.Input.Mapping;
 
 namespace Klavier.UI.Views.Settings.KeybindsEditor;

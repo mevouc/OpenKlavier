@@ -1,7 +1,9 @@
-﻿using Klavier.Config;
+﻿using Klavier.Config.Schema;
 using Klavier.Core.Events;
 using Klavier.Core.Ports;
 using Klavier.SoundFont;
+using Klavier.SoundFont.Parsing;
+using Klavier.SoundFont.Ports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NFluidsynth;

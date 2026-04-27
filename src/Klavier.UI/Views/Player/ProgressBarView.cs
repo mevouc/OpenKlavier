@@ -4,7 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Klavier.Midi;
-using Klavier.Midi.Player;
+using Klavier.Midi.Playback;
 using Klavier.UI.Theme;
 
 namespace Klavier.UI.Views.Player;

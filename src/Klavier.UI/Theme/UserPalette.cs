@@ -1,5 +1,5 @@
 using Avalonia.Media;
-using Klavier.Config;
+using Klavier.Config.Schema;
 
 namespace Klavier.UI.Theme;
 

@@ -1,8 +1,8 @@
 using Klavier.Core.Engine;
 using Klavier.UI.Input;
 using Klavier.UI.Input.Mapping;
-using Klavier.Config;
-using Klavier.UI.Ports;
+using Klavier.Config.Schema;
+using Klavier.Config.UserSettings;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
 using Klavier.UI.Views.Piano;

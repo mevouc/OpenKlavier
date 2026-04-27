@@ -4,7 +4,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Music;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;

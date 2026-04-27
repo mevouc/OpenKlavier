@@ -4,15 +4,12 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using Klavier.Config;
+using Klavier.Config.Schema;
 using Klavier.Core.Engine;
-using Klavier.Midi;
-using Klavier.Midi.Player;
-using Klavier.Midi.Ports;
-using Klavier.UI.Ports;
+using Klavier.Midi.Loading;
+using Klavier.Midi.Playback;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.Views;
@@ -22,12 +19,9 @@ public class ToolbarView : Border
     private const string _MidiPickerTitle = "Choose a MIDI file";
     private const string _MidiTooltip = "A .mid/.midi file containing piano notes";
 
-    private readonly IMidiScoreLoader _midiLoader;
-    private readonly IMidiPlayer _midiPlayer;
-    private readonly IUserSettingsService _settingsService;
-    private readonly ILogger<ToolbarView> _logger;
     private readonly ToggleTextButton _settingsButton;
     private readonly ToggleTextButton _playerToggleButton;
+    private readonly FilePathPicker _midiPicker;
 
     public event Action<bool>? SettingsToggled
     {
@@ -43,18 +37,11 @@ public class ToolbarView : Border
 
     public ToolbarView(
         IPianoEngine pianoEngine,
-        IMidiScoreLoader midiLoader,
         IMidiPlayer midiPlayer,
-        IUserSettingsService settingsService,
+        IMidiFileLoader midiFileLoader,
         IOptionsMonitor<UIConfig> uiConfig,
-        IOptionsMonitor<PlayerConfig> playerConfig,
-        ILogger<ToolbarView> logger)
+        IOptionsMonitor<PlayerConfig> playerConfig)
     {
-        _midiLoader = midiLoader;
-        _midiPlayer = midiPlayer;
-        _settingsService = settingsService;
-        _logger = logger;
-
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
         Padding = new Thickness(8, 4);
 
@@ -71,48 +58,28 @@ public class ToolbarView : Border
 
         _settingsButton = new ToggleTextButton("Settings");
 
-        FilePathPicker midiPicker = new(
+        _midiPicker = new FilePathPicker(
             _MidiPickerTitle,
             _MidiTooltip,
             new FilePickerFileType("MIDI files") { Patterns = ["*.mid", "*.midi"] },
             () => playerConfig.CurrentValue.Path,
-            () => _midiPlayer.CurrentScore?.DisplayName,
-            HandleMidiPath);
+            () => midiPlayer.CurrentScore?.DisplayName,
+            midiFileLoader.TryLoadAsync);
 
-        _playerToggleButton = new ToggleTextButton("Player") { IsEnabled = _midiPlayer.HasLoadedScore };
-        // Auto-load (e.g. AutoLoadMidi at startup) only enables the button; the player is opened only via
-        // an explicit click or via HandleMidiPath (user-triggered load).
-        _midiPlayer.Loaded += _ => Dispatcher.UIThread.Post(() => _playerToggleButton.IsEnabled = true);
+        _playerToggleButton = new ToggleTextButton("Player") { IsEnabled = midiPlayer.HasLoadedScore };
+        // Loaded fires for any load path (file picker, drag-drop, AutoLoadMidi). Enable the button
+        // and refresh the picker so external load paths (e.g. drag-drop) update the displayed filename.
+        midiPlayer.Loaded += _ => Dispatcher.UIThread.Post(() =>
+        {
+            _playerToggleButton.IsEnabled = true;
+            _midiPicker.Refresh();
+        });
 
         Child = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 4,
-            Children = { panicButton, _settingsButton, midiPicker, _playerToggleButton },
+            Children = { panicButton, _settingsButton, _midiPicker, _playerToggleButton },
         };
-    }
-
-    private async Task<bool> HandleMidiPath(string newPath)
-    {
-        MidiScore score;
-        try
-        {
-            score = await _midiLoader.LoadAsync(newPath);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to load MIDI file {Path}", newPath);
-            return false;
-        }
-
-        _midiPlayer.Load(score);
-        _settingsService.UpdateSetting(
-            ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.Path)),
-            newPath);
-
-        // User-triggered load: open the player (auto-load via Loaded event does not).
-        _playerToggleButton.IsToggled = true;
-
-        return true;
     }
 }
