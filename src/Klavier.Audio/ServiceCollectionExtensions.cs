@@ -1,6 +1,5 @@
 using Klavier.Config.Schema;
 using Klavier.Core.Ports;
-using Klavier.SoundFont.Ports;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +13,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<FluidSynthAudioOutput>();
         services.AddSingleton<IAudioOutput>(sp => sp.GetRequiredService<FluidSynthAudioOutput>());
-        services.AddSingleton<ISoundFontInfoProvider>(sp => sp.GetRequiredService<FluidSynthAudioOutput>());
 
         return services;
     }

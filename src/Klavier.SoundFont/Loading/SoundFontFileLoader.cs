@@ -1,8 +1,6 @@
 using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
-using Klavier.SoundFont.Parsing;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.SoundFont.Loading;
@@ -10,23 +8,17 @@ namespace Klavier.SoundFont.Loading;
 public class SoundFontFileLoader(
     IUserSettingsService settings,
     IOptionsMonitor<AudioConfig> audioConfig,
-    ILogger<SoundFontFileLoader> logger) : ISoundFontFileLoader
+    SoundFontInfoCache infoCache) : ISoundFontFileLoader
 {
     public Task<bool> TryLoadAsync(string path)
     {
-        SoundFontInfo newInfo;
-        try
+        if (!infoCache.TryReload(path))
         {
-            newInfo = SoundFontParser.ParseInfo(path);
-        }
-        catch (InvalidDataException ex)
-        {
-            logger.LogWarning(ex, "Failed to load SoundFont file {Path}", path);
             return Task.FromResult(false);
         }
 
         SoundFontConfig soundFontConfig = audioConfig.CurrentValue.SoundFont;
-        (int newBank, int newProgram) = DetermineNewPreset(newInfo.Presets, soundFontConfig.Preset);
+        (int newBank, int newProgram) = DetermineNewPreset(infoCache.GetSoundFontInfo().Presets, soundFontConfig.Preset);
 
         settings.UpdateSetting(
             ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont)),
