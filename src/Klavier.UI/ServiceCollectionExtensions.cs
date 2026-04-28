@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.Configure<UIConfig>(configuration.GetSection(UIConfig.SectionName));
 
         services.AddSingleton<PianoViewModel>();
+        services.AddSingleton<PlayerViewModel>();
         services.AddSingleton<KeyboardInputHandler>();
         services.AddTransient<SustainBarControl>();
         services.AddTransient<PianoView>(sp => new PianoView(

@@ -3,12 +3,11 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using Avalonia.Threading;
 using Klavier.Config.Schema;
 using Klavier.Core.Engine;
 using Klavier.Midi.Loading;
-using Klavier.Midi.Playback;
 using Klavier.UI.Theme;
+using Klavier.UI.ViewModels;
 using Klavier.UI.Views.Controls;
 using Microsoft.Extensions.Options;
 
@@ -37,7 +36,7 @@ public class ToolbarView : Border
 
     public ToolbarView(
         IPianoEngine pianoEngine,
-        IMidiPlayer midiPlayer,
+        PlayerViewModel playerViewModel,
         IMidiFileLoader midiFileLoader,
         IOptionsMonitor<UIConfig> uiConfig,
         IOptionsMonitor<PlayerConfig> playerConfig)
@@ -63,17 +62,19 @@ public class ToolbarView : Border
             _MidiTooltip,
             new FilePickerFileType("MIDI files") { Patterns = ["*.mid", "*.midi"] },
             () => playerConfig.CurrentValue.Path,
-            () => midiPlayer.CurrentScore?.DisplayName,
+            () => playerViewModel.CurrentScore?.DisplayName,
             midiFileLoader.TryLoadAsync);
 
-        _playerToggleButton = new ToggleTextButton("Player") { IsEnabled = midiPlayer.HasLoadedScore };
-        // Loaded fires for any load path (file picker, drag-drop, AutoLoadMidi). Enable the button
-        // and refresh the picker so external load paths (e.g. drag-drop) update the displayed filename.
-        midiPlayer.Loaded += _ => Dispatcher.UIThread.Post(() =>
+        _playerToggleButton = new ToggleTextButton("Player") { IsEnabled = playerViewModel.CurrentScore is not null };
+        // VM dispatches its own property updates onto the UI thread, so subscribers don't need to re-marshal.
+        playerViewModel.PropertyChanged += (_, e) =>
         {
-            _playerToggleButton.IsEnabled = true;
-            _midiPicker.Refresh();
-        });
+            if (e.PropertyName == nameof(PlayerViewModel.CurrentScore))
+            {
+                _playerToggleButton.IsEnabled = playerViewModel.CurrentScore is not null;
+                _midiPicker.Refresh();
+            }
+        };
 
         Child = new StackPanel
         {

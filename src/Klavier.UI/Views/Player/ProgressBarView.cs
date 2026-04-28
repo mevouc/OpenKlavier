@@ -2,10 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
-using Klavier.Midi;
-using Klavier.Midi.Playback;
 using Klavier.UI.Theme;
+using Klavier.UI.ViewModels;
 
 namespace Klavier.UI.Views.Player;
 
@@ -13,12 +11,12 @@ public class ProgressBarView : Grid
 {
     private const double _Height = 2;
 
-    private readonly IMidiPlayer _player;
+    private readonly PlayerViewModel _viewModel;
     private readonly Rectangle _fill;
 
-    public ProgressBarView(IMidiPlayer player)
+    public ProgressBarView(PlayerViewModel viewModel)
     {
-        _player = player;
+        _viewModel = viewModel;
 
         Height = _Height;
         Background = new SolidColorBrush(ThemePaletteProvider.Divider);
@@ -31,20 +29,24 @@ public class ProgressBarView : Grid
         };
         Children.Add(_fill);
 
-        player.Loaded += _ => Dispatcher.UIThread.Post(() => _fill.Width = 0);
-        player.Tick += OnPlayerTick;
-        player.Stopped += () => Dispatcher.UIThread.Post(() => _fill.Width = 0);
-        player.Finished += () => Dispatcher.UIThread.Post(() => _fill.Width = 0);
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PlayerViewModel.Position) or nameof(PlayerViewModel.Duration))
+            {
+                UpdateFillWidth();
+            }
+        };
     }
 
-    private void OnPlayerTick(TimeSpan position)
+    private void UpdateFillWidth()
     {
-        MidiScore? score = _player.CurrentScore;
-        if (score is null || score.TotalDuration <= TimeSpan.Zero)
+        TimeSpan duration = _viewModel.Duration;
+        if (duration <= TimeSpan.Zero)
         {
+            _fill.Width = 0;
             return;
         }
-        double progress = Math.Clamp(position.TotalSeconds / score.TotalDuration.TotalSeconds, 0, 1);
-        Dispatcher.UIThread.Post(() => _fill.Width = Bounds.Width * progress);
+        double progress = Math.Clamp(_viewModel.Position.TotalSeconds / duration.TotalSeconds, 0, 1);
+        _fill.Width = Bounds.Width * progress;
     }
 }

@@ -5,8 +5,8 @@ using Avalonia.Threading;
 using Klavier.Config.Schema;
 using Klavier.Core.Primitives;
 using Klavier.Midi;
-using Klavier.Midi.Playback;
 using Klavier.UI.Theme;
+using Klavier.UI.ViewModels;
 using Klavier.UI.Views.Piano;
 using Microsoft.Extensions.Options;
 
@@ -16,20 +16,23 @@ public class FallingNotesView : Control
 {
     private static readonly SolidColorBrush _NotesColorBrush = new(ThemePaletteProvider.Accent);
 
-    private readonly IMidiPlayer _player;
+    private readonly PlayerViewModel _viewModel;
     private readonly IOptionsMonitor<PlayerConfig> _playerConfig;
 
-    public FallingNotesView(IMidiPlayer player, IOptionsMonitor<PlayerConfig> playerConfig)
+    public FallingNotesView(PlayerViewModel viewModel, IOptionsMonitor<PlayerConfig> playerConfig)
     {
-        _player = player;
+        _viewModel = viewModel;
         _playerConfig = playerConfig;
 
         ClipToBounds = true;
 
-        _player.Tick += _ => Dispatcher.UIThread.Post(InvalidateVisual);
-        _player.Loaded += _ => Dispatcher.UIThread.Post(InvalidateVisual);
-        _player.Stopped += () => Dispatcher.UIThread.Post(InvalidateVisual);
-        _player.Finished += () => Dispatcher.UIThread.Post(InvalidateVisual);
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PlayerViewModel.Position) or nameof(PlayerViewModel.CurrentScore))
+            {
+                InvalidateVisual();
+            }
+        };
         _playerConfig.OnChange(_ => Dispatcher.UIThread.Post(InvalidateVisual));
     }
 
@@ -44,7 +47,7 @@ public class FallingNotesView : Control
 
         DrawColumnHints(context, panelWidth, panelHeight);
 
-        MidiScore? score = _player.CurrentScore;
+        MidiScore? score = _viewModel.CurrentScore;
         if (score is null)
         {
             return;
@@ -56,7 +59,7 @@ public class FallingNotesView : Control
             return;
         }
 
-        TimeSpan position = _player.Position;
+        TimeSpan position = _viewModel.Position;
 
         foreach (MidiNote note in score.Notes)
         {
