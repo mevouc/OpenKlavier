@@ -19,6 +19,11 @@ public class FallingNotesView : Control
     private readonly PlayerViewModel _viewModel;
     private readonly IOptionsMonitor<PlayerConfig> _playerConfig;
 
+    // Cursor over score.Notes (sorted by Start): notes before this index are guaranteed to have ended.
+    // Advances during Render and resets on score change or position rewind (stop / replay).
+    private int _firstActiveIndex;
+    private TimeSpan _lastRenderPosition;
+
     public FallingNotesView(PlayerViewModel viewModel, IOptionsMonitor<PlayerConfig> playerConfig)
     {
         _viewModel = viewModel;
@@ -30,6 +35,11 @@ public class FallingNotesView : Control
         {
             if (e.PropertyName is nameof(PlayerViewModel.Position) or nameof(PlayerViewModel.CurrentScore))
             {
+                if (e.PropertyName == nameof(PlayerViewModel.CurrentScore))
+                {
+                    _firstActiveIndex = 0;
+                    _lastRenderPosition = TimeSpan.Zero;
+                }
                 InvalidateVisual();
             }
         };
@@ -60,15 +70,36 @@ public class FallingNotesView : Control
         }
 
         TimeSpan position = _viewModel.Position;
-
-        foreach (MidiNote note in score.Notes)
+        if (position < _lastRenderPosition)
         {
-            double secondsUntilStart = (note.Start - position).TotalSeconds;
-            double secondsUntilEnd = (note.Start + note.Duration - position).TotalSeconds;
+            // Position rewound (stop, replay, finished->reset): the cursor invariant no longer holds.
+            _firstActiveIndex = 0;
+        }
+        _lastRenderPosition = position;
 
-            if (secondsUntilEnd <= 0 // fully past the piano
-                || secondsUntilStart >= lookaheadSeconds // too far in the future
-                || !PianoKeyGeometry.IsInRange(note.Pitch))
+        IReadOnlyList<MidiNote> notes = score.Notes;
+
+        // Advance the cursor past notes that have fully ended. Sorted-by-Start means once a note's end
+        // has passed, all earlier notes (smaller Start) with shorter-or-equal Duration have also ended;
+        // longer notes that started earlier are caught by the secondsUntilEnd <= 0 check below.
+        while (_firstActiveIndex < notes.Count
+            && notes[_firstActiveIndex].Start + notes[_firstActiveIndex].Duration <= position)
+        {
+            _firstActiveIndex++;
+        }
+
+        for (int i = _firstActiveIndex; i < notes.Count; i++)
+        {
+            MidiNote note = notes[i];
+            double secondsUntilStart = (note.Start - position).TotalSeconds;
+            if (secondsUntilStart >= lookaheadSeconds)
+            {
+                // Sorted by Start: every later note is also too far in the future.
+                break;
+            }
+
+            double secondsUntilEnd = (note.Start + note.Duration - position).TotalSeconds;
+            if (secondsUntilEnd <= 0 || !PianoKeyGeometry.IsInRange(note.Pitch))
             {
                 continue;
             }

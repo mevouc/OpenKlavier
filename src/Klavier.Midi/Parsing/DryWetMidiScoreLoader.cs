@@ -48,6 +48,8 @@ public class DryWetMidiScoreLoader : IMidiScoreLoader
                 (TimeSpan)length,
                 new NoteVelocity((byte)note.Velocity)));
         }
+        // Sort by Start so consumers (e.g. FallingNotesView) can rely on time order for cursor / search.
+        notes.Sort((a, b) => a.Start.CompareTo(b.Start));
         return notes;
     }
 
