@@ -1,10 +1,10 @@
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.Midi;
 using Klavier.Midi.Playback;
+using Klavier.UI.Threading;
 
 namespace Klavier.UI.ViewModels;
 
@@ -44,18 +44,18 @@ public partial class PlayerViewModel : ObservableObject
         AudioEnabled = player.AudioEnabled;
         IsPlaying = player.State == MidiPlayerState.Playing;
 
-        player.Loaded += score => Dispatcher.UIThread.Post(() =>
+        player.Loaded += UIThread.Post<MidiScore>(score =>
         {
             Position = TimeSpan.Zero;
             Duration = score.TotalDuration;
             CurrentScore = score;
         });
-        player.Started += () => Dispatcher.UIThread.Post(() => IsPlaying = true);
-        player.Paused += () => Dispatcher.UIThread.Post(() => IsPlaying = false);
-        player.Stopped += () => Dispatcher.UIThread.Post(OnPlayerReset);
-        player.Finished += () => Dispatcher.UIThread.Post(OnPlayerReset);
-        player.Tick += pos => Dispatcher.UIThread.Post(() => Position = pos);
-        player.AudioEnabledChanged += enabled => Dispatcher.UIThread.Post(() => AudioEnabled = enabled);
+        player.Started += UIThread.Post(() => IsPlaying = true);
+        player.Paused += UIThread.Post(() => IsPlaying = false);
+        player.Stopped += UIThread.Post(OnPlayerReset);
+        player.Finished += UIThread.Post(OnPlayerReset);
+        player.Tick += UIThread.Post<TimeSpan>(pos => Position = pos);
+        player.AudioEnabledChanged += UIThread.Post<bool>(enabled => AudioEnabled = enabled);
     }
 
     public void TogglePlayPause()

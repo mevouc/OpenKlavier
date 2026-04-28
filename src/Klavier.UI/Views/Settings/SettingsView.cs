@@ -13,6 +13,7 @@ using Klavier.SoundFont.Loading;
 using Klavier.SoundFont.Ports;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
+using Klavier.UI.Threading;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings.KeybindsEditor;
 using Microsoft.Extensions.Options;
@@ -154,7 +155,7 @@ public partial class SettingsView : Border
         Slider slider = CreateSlider(NoteVelocity.MinValue, NoteVelocity.MaxValue, initialValue);
         TextBlock value = CreateValueLabel(initialValue.ToString());
         WireSlider(slider, value, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
-        _pianoConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.Velocity));
+        _pianoConfig.OnChangeOnUIThread(c => slider.Value = c.Velocity);
         return CreateRow(_VelocityLabel, value, slider, tooltip: _VelocityTooltip);
     }
 
@@ -164,7 +165,7 @@ public partial class SettingsView : Border
         Slider slider = CreateSlider(Transpose.MinValue, Transpose.MaxValue, initialValue);
         TextBlock value = CreateValueLabel(initialValue.ToString());
         WireSlider(slider, value, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
-        _pianoConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.Transpose));
+        _pianoConfig.OnChangeOnUIThread(c => slider.Value = c.Transpose);
         return CreateRow(_TransposeLabel, value, slider, tooltip: _TransposeTooltip);
     }
 
@@ -174,7 +175,7 @@ public partial class SettingsView : Border
         Slider slider = CreateSlider(0, 120, initialValue);
         TextBlock value = CreateValueLabel($"{initialValue}%");
         WireSlider(slider, value, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
-        _audioConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.VolumeInPercent));
+        _audioConfig.OnChangeOnUIThread(c => slider.Value = c.VolumeInPercent);
         return CreateRow(_VolumeLabel, value, slider);
     }
 
@@ -193,8 +194,7 @@ public partial class SettingsView : Border
                 ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.TempoMultiplier)),
                 tempo);
         };
-        _playerConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(
-            () => slider.Value = (int)Math.Round(c.TempoMultiplier * 100)));
+        _playerConfig.OnChangeOnUIThread(c => slider.Value = (int)Math.Round(c.TempoMultiplier * 100));
         return CreateRow(_TempoLabel, value, slider, tooltip: _TempoTooltip);
     }
 
@@ -204,7 +204,7 @@ public partial class SettingsView : Border
         Slider slider = CreateSlider(1, 10, initialValue);
         TextBlock value = CreateValueLabel($"{initialValue} s");
         WireSlider(slider, value, ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.LookaheadSeconds)), val => $"{val} s");
-        _playerConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => slider.Value = c.LookaheadSeconds));
+        _playerConfig.OnChangeOnUIThread(c => slider.Value = c.LookaheadSeconds);
         return CreateRow(_LookaheadLabel, value, slider, tooltip: _LookaheadTooltip);
     }
 
@@ -220,7 +220,7 @@ public partial class SettingsView : Border
             },
         });
         WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.SustainMode)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.SustainMode));
+        _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.SustainMode);
         return CreateRow(_SustainModeLabel, combo, tooltip: _SustainModeTooltip);
     }
 
@@ -233,8 +233,7 @@ public partial class SettingsView : Border
             () => _audioConfig.CurrentValue.SoundFont.Path,
             () => _soundFontInfoProvider.GetSoundFontInfo().Name,
             _soundFontFileLoader.TryLoadAsync);
-        _soundFontInfoProvider.SoundFontInfoChanged += () =>
-            Avalonia.Threading.Dispatcher.UIThread.Post(picker.Refresh);
+        _soundFontInfoProvider.SoundFontInfoChanged += UIThread.Post(picker.Refresh);
         return CreateRow(_SoundFontLabel, picker, tooltip: _SoundFontTooltip);
     }
 
@@ -243,15 +242,15 @@ public partial class SettingsView : Border
         SoundFontInfo info = _soundFontInfoProvider.GetSoundFontInfo();
         ComboBox combo = CreateComboBox(info.Presets.Values, FindPreset(info.Presets, _audioConfig.CurrentValue.SoundFont.Preset));
         WirePresetComboBox(combo, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Preset)));
-        _audioConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        _audioConfig.OnChangeOnUIThread(c =>
         {
             SoundFontPreset? preset = FindPreset(_soundFontInfoProvider.GetSoundFontInfo().Presets, c.SoundFont.Preset);
             if (preset.HasValue)
             {
                 combo.SelectedItem = preset.Value;
             }
-        }));
-        _soundFontInfoProvider.SoundFontInfoChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        });
+        _soundFontInfoProvider.SoundFontInfoChanged += UIThread.Post(() =>
         {
             SoundFontInfo updatedInfo = _soundFontInfoProvider.GetSoundFontInfo();
             combo.ItemsSource = updatedInfo.Presets.Values;
@@ -268,7 +267,7 @@ public partial class SettingsView : Border
     {
         ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.ShowKeyLabels);
         WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => toggle.IsChecked = c.ShowKeyLabels));
+        _uiConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.ShowKeyLabels);
         return CreateRow(_ShowKeyLabelsLabel, toggle, tooltip: _ShowKeyLabelsTooltip);
     }
 
@@ -276,7 +275,7 @@ public partial class SettingsView : Border
     {
         ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.ShowNoteLabels);
         WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => toggle.IsChecked = c.ShowNoteLabels));
+        _uiConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.ShowNoteLabels);
         return CreateRow(_ShowNoteLabelsLabel, toggle, tooltip: _ShowNoteLabelsTooltip);
     }
 
@@ -284,7 +283,7 @@ public partial class SettingsView : Border
     {
         ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.NoteNameStyle);
         WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.NoteNameStyle)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.NoteNameStyle));
+        _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.NoteNameStyle);
         return CreateRow(_NoteNameStyleLabel, combo, tooltip: _NoteNameStyleTooltip);
     }
 
@@ -292,7 +291,7 @@ public partial class SettingsView : Border
     {
         ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.Theme);
         WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.Theme));
+        _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.Theme);
         return CreateRow(_ThemeLabel, combo);
     }
 
@@ -328,7 +327,7 @@ public partial class SettingsView : Border
     {
         ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.Topmost);
         WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => toggle.IsChecked = c.Topmost));
+        _uiConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.Topmost);
         return CreateRow(_TopmostLabel, toggle);
     }
 
@@ -346,8 +345,8 @@ public partial class SettingsView : Border
         WireKeybindsEditorButton(createLayoutButton, useCurrentLayoutName: false);
         WireKeybindsEditorButton(editLayoutButton, useCurrentLayoutName: true);
         WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
-        _uiConfig.OnChange(c => Avalonia.Threading.Dispatcher.UIThread.Post(() => combo.SelectedItem = c.KeyboardLayout));
-        KeyboardMappingProvider.LayoutsChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.KeyboardLayout);
+        KeyboardMappingProvider.LayoutsChanged += UIThread.Post(() =>
         {
             string? currentSelection = combo.SelectedItem as string;
             combo.ItemsSource = KeyboardMappingProvider.GetAvailableLayouts();

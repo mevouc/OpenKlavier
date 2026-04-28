@@ -1,8 +1,8 @@
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Klavier.Config.Schema;
 using Klavier.Midi.Loading;
 using Klavier.SoundFont.Loading;
+using Klavier.UI.Threading;
 using Microsoft.Extensions.Options;
 
 namespace Klavier.UI.ViewModels;
@@ -54,7 +54,7 @@ public partial class MainWindowViewModel : ObservableObject
         _soundFontFileLoader = soundFontFileLoader;
 
         IsTopmost = uiConfig.CurrentValue.Topmost;
-        uiConfig.OnChange(config => Dispatcher.UIThread.Post(() => IsTopmost = config.Topmost));
+        uiConfig.OnChangeOnUIThread(config => IsTopmost = config.Topmost);
     }
 
     public void OnDragOver(LoadableFileKind kind)

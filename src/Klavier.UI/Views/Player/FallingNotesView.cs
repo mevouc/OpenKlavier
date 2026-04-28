@@ -1,11 +1,11 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Klavier.Config.Schema;
 using Klavier.Core.Primitives;
 using Klavier.Midi;
 using Klavier.UI.Theme;
+using Klavier.UI.Threading;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views.Piano;
 using Microsoft.Extensions.Options;
@@ -33,7 +33,7 @@ public class FallingNotesView : Control
                 InvalidateVisual();
             }
         };
-        _playerConfig.OnChange(_ => Dispatcher.UIThread.Post(InvalidateVisual));
+        _playerConfig.OnChangeOnUIThread(_ => InvalidateVisual());
     }
 
     public override void Render(DrawingContext context)
