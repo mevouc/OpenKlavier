@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<UIConfig>(configuration.GetSection(UIConfig.SectionName));
 
+        services.AddSingleton<IKeyboardMappingService, KeyboardMappingService>();
         services.AddSingleton<PianoViewModel>();
         services.AddSingleton<PlayerViewModel>();
         services.AddSingleton<MainWindowViewModel>();
@@ -46,7 +47,8 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IPianoEngine>(),
                 sp.GetRequiredService<IOptionsMonitor<UIConfig>>(),
                 sp.GetRequiredService<IOptionsMonitor<PianoConfig>>(),
-                sp.GetRequiredService<IUserSettingsService>()));
+                sp.GetRequiredService<IUserSettingsService>(),
+                sp.GetRequiredService<IKeyboardMappingService>()));
 
         return services;
     }

@@ -285,7 +285,7 @@ public partial class SettingsView
     private async Task OpenKeybindsEditor(bool useCurrentLayoutName)
     {
         string currentLayout = _uiConfig.CurrentValue.KeyboardLayout;
-        KeyboardMapping clone = KeyboardMappingProvider.Load(currentLayout);
+        KeyboardMapping clone = _keyboardMappingService.Load(currentLayout);
         string? existingLayoutName = useCurrentLayoutName ? currentLayout : null;
         KeybindsEditorWindow editor = _createKeybindsEditor(clone, existingLayoutName);
 

@@ -27,9 +27,10 @@ public static class StartupConfigValidationService
     {
         IOptions<UIConfig> uiConfig = services.GetRequiredService<IOptions<UIConfig>>();
         IUserSettingsService settings = services.GetRequiredService<IUserSettingsService>();
+        IKeyboardMappingService keyboardMappingService = services.GetRequiredService<IKeyboardMappingService>();
 
         string requested = uiConfig.Value.KeyboardLayout;
-        string[] available = KeyboardMappingProvider.GetAvailableLayouts();
+        string[] available = keyboardMappingService.GetAvailableLayouts();
 
         if (available.Contains(requested, StringComparer.OrdinalIgnoreCase))
         {

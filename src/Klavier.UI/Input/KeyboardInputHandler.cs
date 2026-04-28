@@ -12,21 +12,26 @@ public class KeyboardInputHandler
 {
     private readonly IPianoEngine _pianoEngine;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
+    private readonly IKeyboardMappingService _keyboardMappingService;
     private KeyboardMapping _mapping;
     private readonly Dictionary<PhysicalKey, NotePitch> _heldNotes = [];
 
     private UIConfig _lastUiConfig;
 
-    public KeyboardInputHandler(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig)
+    public KeyboardInputHandler(
+        IPianoEngine pianoEngine,
+        IOptionsMonitor<UIConfig> uiConfig,
+        IKeyboardMappingService keyboardMappingService)
     {
         _pianoEngine = pianoEngine;
         _uiConfig = uiConfig;
-        _mapping = KeyboardMappingProvider.Load(uiConfig.CurrentValue.KeyboardLayout);
+        _keyboardMappingService = keyboardMappingService;
+        _mapping = _keyboardMappingService.Load(uiConfig.CurrentValue.KeyboardLayout);
         _lastUiConfig = uiConfig.CurrentValue;
 
         ApplySustainMode(uiConfig.CurrentValue.SustainMode);
         uiConfig.OnChange(OnUIConfigChanged);
-        KeyboardMappingProvider.LayoutsChanged += ReloadMapping;
+        _keyboardMappingService.LayoutsChanged += ReloadMapping;
     }
 
     private void OnUIConfigChanged(UIConfig newConfig)
@@ -45,7 +50,7 @@ public class KeyboardInputHandler
 
     private void ReloadMapping()
     {
-        _mapping = KeyboardMappingProvider.Load(_uiConfig.CurrentValue.KeyboardLayout);
+        _mapping = _keyboardMappingService.Load(_uiConfig.CurrentValue.KeyboardLayout);
     }
 
     private void ApplySustainMode(SustainMode mode)

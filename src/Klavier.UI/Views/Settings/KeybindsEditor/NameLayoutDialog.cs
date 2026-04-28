@@ -26,6 +26,7 @@ public class NameLayoutDialog : Window
     private static readonly SolidColorBrush _WarningBrush = new(Colors.Orange);
     private static readonly SolidColorBrush _ErrorBrush = new(Colors.IndianRed);
 
+    private readonly IKeyboardMappingService _keyboardMappingService;
     private readonly TextBox _nameBox;
     private readonly TextBlock _feedbackText;
     private readonly TextButton _saveButton;
@@ -36,8 +37,10 @@ public class NameLayoutDialog : Window
     /// </summary>
     public string? ConfirmedName { get; private set; }
 
-    public NameLayoutDialog(string? prefilledName)
+    public NameLayoutDialog(string? prefilledName, IKeyboardMappingService keyboardMappingService)
     {
+        _keyboardMappingService = keyboardMappingService;
+
         Title = _WindowTitle;
         Width = _DialogWidth;
         Height = _DialogHeight;
@@ -129,11 +132,7 @@ public class NameLayoutDialog : Window
         _saveButton.IsEnabled = true;
     }
 
-    private static bool UserLayoutExists(string name)
-    {
-        string path = Path.Combine(KeyboardMappingProvider.UserMappingsDirectory, $"{name.ToLowerInvariant()}.json");
-        return File.Exists(path);
-    }
+    private bool UserLayoutExists(string name) => _keyboardMappingService.UserLayoutExists(name);
 
     private Grid BuildLayout()
     {

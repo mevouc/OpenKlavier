@@ -3,6 +3,7 @@ using Avalonia.Styling;
 
 namespace Klavier.UI.Theme;
 
+// Process-global by design: theme is set once at startup and changing it requires a restart.
 public static class ThemePaletteProvider
 {
     public static readonly ThemePalette Dark = new()

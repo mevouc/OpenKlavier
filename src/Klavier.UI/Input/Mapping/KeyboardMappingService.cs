@@ -6,7 +6,7 @@ using Klavier.UI.Input.Mapping.Dto;
 
 namespace Klavier.UI.Input.Mapping;
 
-public static class KeyboardMappingProvider
+public class KeyboardMappingService : IKeyboardMappingService
 {
     private const string _MappingsFolder = "mappings";
     private const string _AppDataFolder = "Klavier";
@@ -17,9 +17,9 @@ public static class KeyboardMappingProvider
         WriteIndented = true,
     };
 
-    public static event Action? LayoutsChanged;
+    public event Action? LayoutsChanged;
 
-    public static string UserMappingsDirectory
+    private static string UserMappingsDirectory
     {
         get
         {
@@ -34,7 +34,7 @@ public static class KeyboardMappingProvider
 
     private static string AppMappingsDirectory => Path.Combine(AppContext.BaseDirectory, _MappingsFolder);
 
-    public static string[] GetAvailableLayouts()
+    public string[] GetAvailableLayouts()
     {
         HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
 
@@ -51,7 +51,7 @@ public static class KeyboardMappingProvider
         return [.. names.Order()];
     }
 
-    public static KeyboardMapping Load(string layoutName)
+    public KeyboardMapping Load(string layoutName)
     {
         string fileName = $"{layoutName.ToLowerInvariant()}.json";
         string userPath = Path.Combine(UserMappingsDirectory, fileName);
@@ -76,7 +76,7 @@ public static class KeyboardMappingProvider
         };
     }
 
-    public static void Save(string name, KeyboardMappingDto dto)
+    public void Save(string name, KeyboardMappingDto dto)
     {
         if (!LayoutNameValidator.TryValidate(name, out string? reason))
         {
@@ -88,6 +88,12 @@ public static class KeyboardMappingProvider
         File.WriteAllText(path, json);
 
         LayoutsChanged?.Invoke();
+    }
+
+    public bool UserLayoutExists(string name)
+    {
+        string path = Path.Combine(UserMappingsDirectory, $"{name.ToLowerInvariant()}.json");
+        return File.Exists(path);
     }
 
     private static FrozenDictionary<PhysicalKey, KeyMappingEntry> BuildKeyMap(Dictionary<string, KeyMappingEntryDto> entries)

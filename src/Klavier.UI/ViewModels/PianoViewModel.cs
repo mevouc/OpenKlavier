@@ -16,15 +16,21 @@ public class PianoViewModel : INoteEventHandler
     private readonly FrozenDictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
     private readonly IOptionsMonitor<PianoConfig> _pianoConfig;
+    private readonly IKeyboardMappingService _keyboardMappingService;
 
     public IReadOnlyList<PianoKeyViewModel> Keys { get; }
     public bool IsSustainOn { get; private set; }
     public event Action<bool>? SustainChanged;
 
-    public PianoViewModel(IPianoEngine pianoEngine, IOptionsMonitor<UIConfig> uiConfig, IOptionsMonitor<PianoConfig> pianoConfig)
+    public PianoViewModel(
+        IPianoEngine pianoEngine,
+        IOptionsMonitor<UIConfig> uiConfig,
+        IOptionsMonitor<PianoConfig> pianoConfig,
+        IKeyboardMappingService keyboardMappingService)
     {
         _uiConfig = uiConfig;
         _pianoConfig = pianoConfig;
+        _keyboardMappingService = keyboardMappingService;
         _uiConfig.OnChange(OnUIConfigChanged);
         _pianoConfig.OnChange(OnPianoConfigChanged);
 
@@ -96,8 +102,8 @@ public class PianoViewModel : INoteEventHandler
         });
     }
 
-    private static IReadOnlyDictionary<NotePitch, string> LoadKeyLabels(string layoutName)
+    private IReadOnlyDictionary<NotePitch, string> LoadKeyLabels(string layoutName)
     {
-        return KeyboardMappingProvider.Load(layoutName).ToLabelsByPitch();
+        return _keyboardMappingService.Load(layoutName).ToLabelsByPitch();
     }
 }

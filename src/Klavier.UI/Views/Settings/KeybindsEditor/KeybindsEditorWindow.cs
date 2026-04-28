@@ -44,6 +44,7 @@ public class KeybindsEditorWindow : Window
     private readonly PianoView _pianoView;
     private readonly IPianoEngine _pianoEngine;
     private readonly IUserSettingsService _settingsService;
+    private readonly IKeyboardMappingService _keyboardMappingService;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly TextBlock _statusText;
     private readonly StyledComboBox _modifierCombo;
@@ -59,11 +60,13 @@ public class KeybindsEditorWindow : Window
         IPianoEngine pianoEngine,
         IOptionsMonitor<UIConfig> uiConfig,
         IOptionsMonitor<PianoConfig> pianoConfig,
-        IUserSettingsService settingsService)
+        IUserSettingsService settingsService,
+        IKeyboardMappingService keyboardMappingService)
     {
         _existingLayoutName = existingLayoutName;
         _pianoEngine = pianoEngine;
         _settingsService = settingsService;
+        _keyboardMappingService = keyboardMappingService;
         _noteNameStyle = uiConfig.CurrentValue.NoteNameStyle;
         _session = new KeybindsEditSession(cloneSource);
 
@@ -342,7 +345,7 @@ public class KeybindsEditorWindow : Window
         string? name = _existingLayoutName;
         if (name is null)
         {
-            NameLayoutDialog dialog = new(prefilledName: null);
+            NameLayoutDialog dialog = new(prefilledName: null, _keyboardMappingService);
             await dialog.ShowDialog(this);
             name = dialog.ConfirmedName;
             if (name is null)
@@ -351,7 +354,7 @@ public class KeybindsEditorWindow : Window
             }
         }
 
-        KeyboardMappingProvider.Save(name, _session.ToDto());
+        _keyboardMappingService.Save(name, _session.ToDto());
         _settingsService.UpdateSetting(
             ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)),
             name);

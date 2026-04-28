@@ -3,6 +3,7 @@ using Klavier.Config.Schema;
 
 namespace Klavier.UI.Theme;
 
+// Process-global by design: colors are loaded once at startup and changing them requires a restart.
 public static class UserPalette
 {
     private static Color _accent;

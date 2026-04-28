@@ -69,6 +69,7 @@ public partial class SettingsView : Border
     private readonly IOptionsMonitor<AudioConfig> _audioConfig;
     private readonly IOptionsMonitor<PlayerConfig> _playerConfig;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
+    private readonly IKeyboardMappingService _keyboardMappingService;
     private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
 
     public SettingsView(
@@ -79,6 +80,7 @@ public partial class SettingsView : Border
         IOptionsMonitor<AudioConfig> audioConfig,
         IOptionsMonitor<PlayerConfig> playerConfig,
         IOptionsMonitor<UIConfig> uiConfig,
+        IKeyboardMappingService keyboardMappingService,
         Func<KeyboardMapping, string?, KeybindsEditorWindow> createKeybindsEditor)
     {
         _settingsService = settingsService;
@@ -88,6 +90,7 @@ public partial class SettingsView : Border
         _audioConfig = audioConfig;
         _playerConfig = playerConfig;
         _uiConfig = uiConfig;
+        _keyboardMappingService = keyboardMappingService;
         _createKeybindsEditor = createKeybindsEditor;
 
         Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
@@ -333,7 +336,7 @@ public partial class SettingsView : Border
 
     private DockPanel BuildKeyboardLayoutRow()
     {
-        ComboBox combo = CreateComboBox(KeyboardMappingProvider.GetAvailableLayouts(), _uiConfig.CurrentValue.KeyboardLayout);
+        ComboBox combo = CreateComboBox(_keyboardMappingService.GetAvailableLayouts(), _uiConfig.CurrentValue.KeyboardLayout);
         IconButton createLayoutButton = CreatePlusIconButton();
         IconButton editLayoutButton = CreatePencilIconButton();
         StackPanel layoutRow = new()
@@ -346,10 +349,10 @@ public partial class SettingsView : Border
         WireKeybindsEditorButton(editLayoutButton, useCurrentLayoutName: true);
         WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
         _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.KeyboardLayout);
-        KeyboardMappingProvider.LayoutsChanged += UIThread.Post(() =>
+        _keyboardMappingService.LayoutsChanged += UIThread.Post(() =>
         {
             string? currentSelection = combo.SelectedItem as string;
-            combo.ItemsSource = KeyboardMappingProvider.GetAvailableLayouts();
+            combo.ItemsSource = _keyboardMappingService.GetAvailableLayouts();
             combo.SelectedItem = currentSelection;
         });
         return CreateRow(_KeyboardLayoutLabel, layoutRow, tooltip: _KeyboardLayoutTooltip);
