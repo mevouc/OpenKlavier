@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.Midi;
@@ -76,9 +75,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         bool newValue = !AudioEnabled;
         _player.AudioEnabled = newValue;
-        _settings.UpdateSetting(
-            ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.AudioEnabled)),
-            newValue);
+        _settings.UpdateSetting(PlayerConfig.Keys.AudioEnabled, newValue);
     }
 
     private void OnPlayerReset()

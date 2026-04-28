@@ -1,4 +1,3 @@
-using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Microsoft.Extensions.Options;
@@ -21,7 +20,7 @@ public class SoundFontFileLoader(
         (int newBank, int newProgram) = DetermineNewPreset(infoCache.GetSoundFontInfo().Presets, soundFontConfig.Preset);
 
         settings.UpdateSetting(
-            ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont)),
+            AudioConfig.Keys.SoundFont.Section,
             new { Path = path, Preset = new { Bank = newBank, Program = newProgram } });
         return Task.FromResult(true);
     }

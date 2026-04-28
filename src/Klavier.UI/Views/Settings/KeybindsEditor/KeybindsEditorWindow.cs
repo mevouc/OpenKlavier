@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.Core.Engine;
@@ -355,9 +354,7 @@ public class KeybindsEditorWindow : Window
         }
 
         _keyboardMappingService.Save(name, _session.ToDto());
-        _settingsService.UpdateSetting(
-            ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)),
-            name);
+        _settingsService.UpdateSetting(UIConfig.Keys.KeyboardLayout, name);
         Close();
     }
 }

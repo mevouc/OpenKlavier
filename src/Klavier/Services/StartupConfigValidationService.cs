@@ -1,4 +1,3 @@
-using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.UI.Input.Mapping;
@@ -41,7 +40,7 @@ public static class StartupConfigValidationService
             "Keyboard layout '{Requested}' not found. Clearing user override, falling back to appsettings.json default.",
             requested);
 
-        settings.ClearSetting(ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
+        settings.ClearSetting(UIConfig.Keys.KeyboardLayout);
     }
 
     private static void ValidateSoundFontPath(IServiceProvider services, ILogger logger)
@@ -50,7 +49,7 @@ public static class StartupConfigValidationService
         HealMissingFilePath(
             audioConfig.Value.SoundFont.Path,
             "SoundFont",
-            ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Path)),
+            AudioConfig.Keys.SoundFont.Path,
             services,
             logger);
     }
@@ -61,7 +60,7 @@ public static class StartupConfigValidationService
         HealMissingFilePath(
             playerConfig.Value.Path,
             "MIDI",
-            ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.Path)),
+            PlayerConfig.Keys.Path,
             services,
             logger);
     }

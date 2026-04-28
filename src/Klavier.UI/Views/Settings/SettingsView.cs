@@ -4,7 +4,6 @@ using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.Core.Primitives;
@@ -157,7 +156,7 @@ public partial class SettingsView : Border
         int initialValue = _pianoConfig.CurrentValue.Velocity;
         Slider slider = CreateSlider(NoteVelocity.MinValue, NoteVelocity.MaxValue, initialValue);
         TextBlock value = CreateValueLabel(initialValue.ToString());
-        WireSlider(slider, value, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Velocity)));
+        WireSlider(slider, value, PianoConfig.Keys.Velocity);
         _pianoConfig.OnChangeOnUIThread(c => slider.Value = c.Velocity);
         return CreateRow(_VelocityLabel, value, slider, tooltip: _VelocityTooltip);
     }
@@ -167,7 +166,7 @@ public partial class SettingsView : Border
         int initialValue = _pianoConfig.CurrentValue.Transpose;
         Slider slider = CreateSlider(Transpose.MinValue, Transpose.MaxValue, initialValue);
         TextBlock value = CreateValueLabel(initialValue.ToString());
-        WireSlider(slider, value, ConfigKey.Of(PianoConfig.SectionName, nameof(PianoConfig.Transpose)));
+        WireSlider(slider, value, PianoConfig.Keys.Transpose);
         _pianoConfig.OnChangeOnUIThread(c => slider.Value = c.Transpose);
         return CreateRow(_TransposeLabel, value, slider, tooltip: _TransposeTooltip);
     }
@@ -177,7 +176,7 @@ public partial class SettingsView : Border
         ushort initialValue = _audioConfig.CurrentValue.VolumeInPercent;
         Slider slider = CreateSlider(0, 120, initialValue);
         TextBlock value = CreateValueLabel($"{initialValue}%");
-        WireSlider(slider, value, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.VolumeInPercent)), val => $"{val}%");
+        WireSlider(slider, value, AudioConfig.Keys.VolumeInPercent, val => $"{val}%");
         _audioConfig.OnChangeOnUIThread(c => slider.Value = c.VolumeInPercent);
         return CreateRow(_VolumeLabel, value, slider);
     }
@@ -193,9 +192,7 @@ public partial class SettingsView : Border
             int percent = (int)e.NewValue;
             double tempo = percent / 100.0;
             value.Text = $"{tempo:0.00}x";
-            _settingsService.UpdateSetting(
-                ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.TempoMultiplier)),
-                tempo);
+            _settingsService.UpdateSetting(PlayerConfig.Keys.TempoMultiplier, tempo);
         };
         _playerConfig.OnChangeOnUIThread(c => slider.Value = (int)Math.Round(c.TempoMultiplier * 100));
         return CreateRow(_TempoLabel, value, slider, tooltip: _TempoTooltip);
@@ -206,7 +203,7 @@ public partial class SettingsView : Border
         int initialValue = _playerConfig.CurrentValue.LookaheadSeconds;
         Slider slider = CreateSlider(1, 10, initialValue);
         TextBlock value = CreateValueLabel($"{initialValue} s");
-        WireSlider(slider, value, ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.LookaheadSeconds)), val => $"{val} s");
+        WireSlider(slider, value, PlayerConfig.Keys.LookaheadSeconds, val => $"{val} s");
         _playerConfig.OnChangeOnUIThread(c => slider.Value = c.LookaheadSeconds);
         return CreateRow(_LookaheadLabel, value, slider, tooltip: _LookaheadTooltip);
     }
@@ -222,7 +219,7 @@ public partial class SettingsView : Border
                 _ => mode.ToString(),
             },
         });
-        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.SustainMode)));
+        WireComboBox(combo, UIConfig.Keys.SustainMode);
         _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.SustainMode);
         return CreateRow(_SustainModeLabel, combo, tooltip: _SustainModeTooltip);
     }
@@ -244,7 +241,7 @@ public partial class SettingsView : Border
     {
         SoundFontInfo info = _soundFontInfoProvider.GetSoundFontInfo();
         ComboBox combo = CreateComboBox(info.Presets.Values, FindPreset(info.Presets, _audioConfig.CurrentValue.SoundFont.Preset));
-        WirePresetComboBox(combo, ConfigKey.Of(AudioConfig.SectionName, nameof(AudioConfig.SoundFont), nameof(SoundFontConfig.Preset)));
+        WirePresetComboBox(combo, AudioConfig.Keys.SoundFont.Preset);
         _audioConfig.OnChangeOnUIThread(c =>
         {
             SoundFontPreset? preset = FindPreset(_soundFontInfoProvider.GetSoundFontInfo().Presets, c.SoundFont.Preset);
@@ -269,7 +266,7 @@ public partial class SettingsView : Border
     private DockPanel BuildShowKeyLabelsRow()
     {
         ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.ShowKeyLabels);
-        WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowKeyLabels)));
+        WireToggle(toggle, UIConfig.Keys.ShowKeyLabels);
         _uiConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.ShowKeyLabels);
         return CreateRow(_ShowKeyLabelsLabel, toggle, tooltip: _ShowKeyLabelsTooltip);
     }
@@ -277,7 +274,7 @@ public partial class SettingsView : Border
     private DockPanel BuildShowNoteLabelsRow()
     {
         ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.ShowNoteLabels);
-        WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.ShowNoteLabels)));
+        WireToggle(toggle, UIConfig.Keys.ShowNoteLabels);
         _uiConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.ShowNoteLabels);
         return CreateRow(_ShowNoteLabelsLabel, toggle, tooltip: _ShowNoteLabelsTooltip);
     }
@@ -285,7 +282,7 @@ public partial class SettingsView : Border
     private DockPanel BuildNoteNameStyleRow()
     {
         ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.NoteNameStyle);
-        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.NoteNameStyle)));
+        WireComboBox(combo, UIConfig.Keys.NoteNameStyle);
         _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.NoteNameStyle);
         return CreateRow(_NoteNameStyleLabel, combo, tooltip: _NoteNameStyleTooltip);
     }
@@ -293,7 +290,7 @@ public partial class SettingsView : Border
     private DockPanel BuildThemeRow()
     {
         ComboBox combo = CreateComboBox(_uiConfig.CurrentValue.Theme);
-        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Theme)));
+        WireComboBox(combo, UIConfig.Keys.Theme);
         _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.Theme);
         return CreateRow(_ThemeLabel, combo);
     }
@@ -301,35 +298,35 @@ public partial class SettingsView : Border
     private DockPanel BuildAccentColorRow()
     {
         TextBox textBox = CreateHexColorTextBox(UserPalette.Accent);
-        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.Accent)));
+        WireHexColorTextBox(textBox, UIConfig.Keys.Colors.Accent);
         return CreateRow(_AccentLabel, textBox, tooltip: _AccentTooltip);
     }
 
     private DockPanel BuildWhiteKeyColorRow()
     {
         TextBox textBox = CreateHexColorTextBox(UserPalette.WhiteKey);
-        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.WhiteKey)));
+        WireHexColorTextBox(textBox, UIConfig.Keys.Colors.WhiteKey);
         return CreateRow(_WhiteKeyLabel, textBox);
     }
 
     private DockPanel BuildBlackKeyColorRow()
     {
         TextBox textBox = CreateHexColorTextBox(UserPalette.BlackKey);
-        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.BlackKey)));
+        WireHexColorTextBox(textBox, UIConfig.Keys.Colors.BlackKey);
         return CreateRow(_BlackKeyLabel, textBox);
     }
 
     private DockPanel BuildKeyBorderColorRow()
     {
         TextBox textBox = CreateHexColorTextBox(UserPalette.KeyBorder);
-        WireHexColorTextBox(textBox, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Colors), nameof(ColorsConfig.KeyBorder)));
+        WireHexColorTextBox(textBox, UIConfig.Keys.Colors.KeyBorder);
         return CreateRow(_KeyBorderLabel, textBox, tooltip: _KeyBorderTooltip);
     }
 
     private DockPanel BuildTopmostRow()
     {
         ToggleSwitch toggle = CreateToggleSwitch(_uiConfig.CurrentValue.Topmost);
-        WireToggle(toggle, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.Topmost)));
+        WireToggle(toggle, UIConfig.Keys.Topmost);
         _uiConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.Topmost);
         return CreateRow(_TopmostLabel, toggle);
     }
@@ -347,7 +344,7 @@ public partial class SettingsView : Border
         };
         WireKeybindsEditorButton(createLayoutButton, useCurrentLayoutName: false);
         WireKeybindsEditorButton(editLayoutButton, useCurrentLayoutName: true);
-        WireComboBox(combo, ConfigKey.Of(UIConfig.SectionName, nameof(UIConfig.KeyboardLayout)));
+        WireComboBox(combo, UIConfig.Keys.KeyboardLayout);
         _uiConfig.OnChangeOnUIThread(c => combo.SelectedItem = c.KeyboardLayout);
         _keyboardMappingService.LayoutsChanged += UIThread.Post(() =>
         {

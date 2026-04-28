@@ -1,4 +1,3 @@
-using Klavier.Config;
 using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.Midi.Parsing;
@@ -27,9 +26,7 @@ public class MidiFileLoader(
         }
 
         player.Load(score);
-        settings.UpdateSetting(
-            ConfigKey.Of(PlayerConfig.SectionName, nameof(PlayerConfig.Path)),
-            path);
+        settings.UpdateSetting(PlayerConfig.Keys.Path, path);
         return true;
     }
 }
