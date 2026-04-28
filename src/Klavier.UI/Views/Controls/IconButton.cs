@@ -5,7 +5,7 @@ using Klavier.UI.Theme;
 
 namespace Klavier.UI.Views.Controls;
 
-public class IconButton : CustomButtonBase
+public class IconButton : BaseButton
 {
     private readonly PathIcon _icon;
 

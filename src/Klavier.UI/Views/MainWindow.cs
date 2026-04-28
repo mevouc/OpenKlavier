@@ -7,8 +7,10 @@ using Klavier.UI.Input;
 using Klavier.UI.Theme;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views.Controls;
+using Klavier.UI.Views.Layout;
 using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Player;
+using Klavier.UI.Views.Settings;
 
 namespace Klavier.UI.Views;
 
@@ -28,7 +30,7 @@ public class MainWindow : Window
         PianoView pianoView,
         PlayerView playerView,
         ToolbarView toolbarView,
-        SettingsPanel settingsPanel,
+        SettingsView settingsPanel,
         MainWindowViewModel viewModel,
         DropOverlay dropOverlay)
     {

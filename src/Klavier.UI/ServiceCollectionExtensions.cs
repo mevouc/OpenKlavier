@@ -8,6 +8,7 @@ using Klavier.UI.Views;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Player;
+using Klavier.UI.Views.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -35,7 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ProgressBarView>();
         services.AddTransient<PlayerView>();
         services.AddTransient<ToolbarView>();
-        services.AddTransient<SettingsPanel>();
+        services.AddTransient<SettingsView>();
         services.AddTransient<MainWindow>();
 
         services.AddSingleton<Func<KeyboardMapping, string?, KeybindsEditorWindow>>(sp =>

@@ -2,11 +2,11 @@ using Avalonia;
 
 namespace Klavier.UI.Views.Controls;
 
-public abstract class CustomButtonBase : ActivableControl
+public abstract class BaseButton : ActivableControl
 {
     private const double _DefaultHeight = 32;
 
-    protected CustomButtonBase(bool momentaryActiveOnPress)
+    protected BaseButton(bool momentaryActiveOnPress)
     {
         Height = _DefaultHeight;
         if (momentaryActiveOnPress)

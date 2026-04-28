@@ -5,7 +5,7 @@ using Klavier.UI.Theme;
 
 namespace Klavier.UI.Views.Controls;
 
-public class TextButton : CustomButtonBase
+public class TextButton : BaseButton
 {
     private readonly TextBlock _label;
 

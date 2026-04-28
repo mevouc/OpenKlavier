@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Layout;
 
 /// <summary>
 /// Manages a collapsible row + splitter + content as one unit in a Window's outer Grid.

@@ -14,14 +14,12 @@ using Klavier.SoundFont.Ports;
 using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
-using Klavier.UI.Views.Settings;
 using Klavier.UI.Views.Settings.KeybindsEditor;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Settings;
 
-public partial class SettingsPanel : Border
+public partial class SettingsView : Border
 {
     private const string _VelocityLabel = "Velocity";
     private const string _TransposeLabel = "Transpose";
@@ -72,7 +70,7 @@ public partial class SettingsPanel : Border
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
     private readonly Func<KeyboardMapping, string?, KeybindsEditorWindow> _createKeybindsEditor;
 
-    public SettingsPanel(
+    public SettingsView(
         IUserSettingsService settingsService,
         ISoundFontInfoProvider soundFontInfoProvider,
         ISoundFontFileLoader soundFontFileLoader,

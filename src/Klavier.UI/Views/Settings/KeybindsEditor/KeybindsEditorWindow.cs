@@ -46,7 +46,7 @@ public class KeybindsEditorWindow : Window
     private readonly IUserSettingsService _settingsService;
     private readonly Dictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly TextBlock _statusText;
-    private readonly CustomComboBox _modifierCombo;
+    private readonly StyledComboBox _modifierCombo;
     private readonly Viewbox _schemaViewbox;
     private readonly TextButton _saveButton;
     private readonly NoteNameStyle _noteNameStyle;
@@ -267,7 +267,7 @@ public class KeybindsEditorWindow : Window
         };
     }
 
-    private CustomComboBox BuildModifierCombo() => new()
+    private StyledComboBox BuildModifierCombo() => new()
     {
         ItemsSource = KeyModifierOptions.AllLabels,
         SelectedItem = KeyModifierOptions.LabelOf(_session.BlackKeyModifier),

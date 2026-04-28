@@ -9,11 +9,10 @@ using Klavier.UI.Input.Mapping;
 using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Settings.KeybindsEditor;
-using Microsoft.Extensions.Options;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Settings;
 
-public partial class SettingsPanel
+public partial class SettingsView
 {
     private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
     private static readonly SolidColorBrush _SubtextBrush = new(ThemePaletteProvider.TextPrimary) { Opacity = 0.7 };
@@ -157,10 +156,10 @@ public partial class SettingsPanel
         };
     }
 
-    private static CustomComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
+    private static StyledComboBox CreateComboBox<TEnum>(TEnum selectedValue) where TEnum : struct, Enum
         => CreateComboBox(Enum.GetValues<TEnum>(), selectedValue);
 
-    private static CustomComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue) => new()
+    private static StyledComboBox CreateComboBox(System.Collections.IEnumerable items, object? selectedValue) => new()
     {
         ItemsSource = items,
         SelectedItem = selectedValue,

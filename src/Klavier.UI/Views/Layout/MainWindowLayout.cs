@@ -5,8 +5,9 @@ using Klavier.UI.Theme;
 using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Player;
+using Klavier.UI.Views.Settings;
 
-namespace Klavier.UI.Views;
+namespace Klavier.UI.Views.Layout;
 
 /// <summary>
 /// Builds and owns MainWindow's layout tree: outer 4-row grid (player / piano section / splitter / settings),
@@ -33,7 +34,7 @@ public class MainWindowLayout
         PianoView pianoView,
         PlayerView playerView,
         ToolbarView toolbarView,
-        SettingsPanel settingsPanel,
+        SettingsView settingsPanel,
         DropOverlay dropOverlay)
     {
         Grid pianoSection = BuildPianoSection(pianoView, toolbarView);

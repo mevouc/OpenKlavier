@@ -5,7 +5,7 @@ using Klavier.UI.Theme;
 
 namespace Klavier.UI.Views.Controls;
 
-public class CustomComboBox : ComboBox
+public class StyledComboBox : ComboBox
 {
     private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
     private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
@@ -14,7 +14,7 @@ public class CustomComboBox : ComboBox
     // Inherit the Fluent ComboBox control template (Avalonia style matching is exact-type by default).
     protected override Type StyleKeyOverride => typeof(ComboBox);
 
-    public CustomComboBox()
+    public StyledComboBox()
     {
         VerticalAlignment = VerticalAlignment.Center;
         MinWidth = 120;

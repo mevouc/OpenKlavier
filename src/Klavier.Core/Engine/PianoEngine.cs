@@ -4,7 +4,6 @@ using Klavier.Core.Ports;
 using Klavier.Core.Primitives;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Linq;
 
 namespace Klavier.Core.Engine;
 
