@@ -5,6 +5,7 @@ using Klavier.Config.Schema;
 using Klavier.Config.UserSettings;
 using Klavier.UI.ViewModels;
 using Klavier.UI.Views;
+using Klavier.UI.Views.Controls;
 using Klavier.UI.Views.Piano;
 using Klavier.UI.Views.Player;
 using Microsoft.Extensions.Configuration;
@@ -22,8 +23,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<PianoViewModel>();
         services.AddSingleton<PlayerViewModel>();
+        services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<KeyboardInputHandler>();
         services.AddTransient<SustainBarControl>();
+        services.AddTransient<DropOverlay>();
         services.AddTransient<PianoView>(sp => new PianoView(
             sp.GetRequiredService<PianoViewModel>().Keys,
             sp.GetRequiredService<SustainBarControl>()));
