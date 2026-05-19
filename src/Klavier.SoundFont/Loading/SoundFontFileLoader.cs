@@ -21,7 +21,11 @@ public class SoundFontFileLoader(
 
         settings.UpdateSetting(
             AudioConfig.Keys.SoundFont.Section,
-            new { Path = path, Preset = new { Bank = newBank, Program = newProgram } });
+            new SoundFontConfig
+            {
+                Path = path,
+                Preset = new SoundFontPresetConfig { Bank = newBank, Program = newProgram },
+            });
         return Task.FromResult(true);
     }
 

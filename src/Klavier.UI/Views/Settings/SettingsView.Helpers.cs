@@ -236,7 +236,9 @@ public partial class SettingsView
         {
             if (comboBox.SelectedItem is SoundFontPreset preset)
             {
-                _settingsService.UpdateSetting(presetKeyPath, new { preset.Bank, preset.Program });
+                _settingsService.UpdateSetting(
+                    presetKeyPath,
+                    new SoundFontPresetConfig { Bank = preset.Bank, Program = preset.Program });
             }
         };
     }
