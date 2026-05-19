@@ -3,14 +3,28 @@ using System.Text.Json.Nodes;
 
 namespace Klavier.Config.UserSettings;
 
-public class UserSettingsService(string appName) : IUserSettingsService
+public class UserSettingsService : IUserSettingsService
 {
     private const string _UserSettingsFileName = "usersettings.json";
     private const string _EmptyContent = "{}";
+    // Settings changes are coalesced in memory and flushed to disk after this idle window.
+    // Trade-off: if the app closes within this window of the last change, that change is lost.
+    private const int _FlushDelayMs = 300;
 
     private static readonly JsonSerializerOptions _WriteOptions = new() { WriteIndented = true };
 
-    private readonly string _filePath = GetFilePath(appName);
+    private readonly Lock _lock = new();
+    private readonly string _filePath;
+    private readonly JsonObject _settings;
+    private readonly Timer _flushTimer;
+
+    public UserSettingsService(string appName)
+    {
+        _filePath = GetFilePath(appName);
+        string json = File.ReadAllText(_filePath);
+        _settings = JsonNode.Parse(json)?.AsObject() ?? [];
+        _flushTimer = new Timer(_ => Flush(), null, Timeout.Infinite, Timeout.Infinite);
+    }
 
     public static string GetFilePath(string appName)
     {
@@ -33,53 +47,66 @@ public class UserSettingsService(string appName) : IUserSettingsService
 
     public void UpdateSetting(string keyPath, object value)
     {
-        string json = File.ReadAllText(_filePath);
-        JsonObject root = JsonNode.Parse(json)?.AsObject() ?? [];
-
-        string[] segments = keyPath.Split(':');
-        JsonObject current = root;
-        for (int i = 0; i < segments.Length - 1; i++)
+        lock (_lock)
         {
-            JsonObject? child = current[segments[i]]?.AsObject();
-            if (child is null)
+            string[] segments = keyPath.Split(':');
+            JsonObject current = _settings;
+            for (int i = 0; i < segments.Length - 1; i++)
             {
-                child = [];
-                current[segments[i]] = child;
+                JsonObject? child = current[segments[i]]?.AsObject();
+                if (child is null)
+                {
+                    child = [];
+                    current[segments[i]] = child;
+                }
+                current = child;
             }
-            current = child;
+            current[segments[^1]] = JsonSerializer.SerializeToNode(value);
         }
-        current[segments[^1]] = JsonSerializer.SerializeToNode(value);
-
-        File.WriteAllText(_filePath, root.ToJsonString(_WriteOptions));
+        ScheduleFlush();
     }
 
     public void ClearSetting(string keyPath)
     {
-        string json = File.ReadAllText(_filePath);
-        JsonObject? root = JsonNode.Parse(json)?.AsObject();
-        if (root is null)
+        lock (_lock)
         {
-            return;
-        }
-
-        string[] segments = keyPath.Split(':');
-        JsonObject current = root;
-        for (int i = 0; i < segments.Length - 1; i++)
-        {
-            JsonObject? child = current[segments[i]]?.AsObject();
-            if (child is null)
+            string[] segments = keyPath.Split(':');
+            JsonObject current = _settings;
+            for (int i = 0; i < segments.Length - 1; i++)
             {
-                return; // path doesn't exist, nothing to clear
+                JsonObject? child = current[segments[i]]?.AsObject();
+                if (child is null)
+                {
+                    return; // path doesn't exist, nothing to clear
+                }
+                current = child;
             }
-            current = child;
+            current.Remove(segments[^1]);
         }
-        current.Remove(segments[^1]);
-
-        File.WriteAllText(_filePath, root.ToJsonString(_WriteOptions));
+        ScheduleFlush();
     }
 
     public void ResetAll()
     {
-        File.WriteAllText(_filePath, _EmptyContent);
+        lock (_lock)
+        {
+            _settings.Clear();
+        }
+        Flush();
+    }
+
+    private void ScheduleFlush()
+    {
+        _flushTimer.Change(_FlushDelayMs, Timeout.Infinite);
+    }
+
+    private void Flush()
+    {
+        string content;
+        lock (_lock)
+        {
+            content = _settings.ToJsonString(_WriteOptions);
+        }
+        File.WriteAllText(_filePath, content);
     }
 }

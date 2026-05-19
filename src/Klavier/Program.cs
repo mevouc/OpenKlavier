@@ -11,7 +11,7 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        using IHost host = Host.CreateDefaultBuilder(args)
+        IHost host = Host.CreateDefaultBuilder(args)
             .UseContentRoot(AppContext.BaseDirectory)
             .UseUserSettings(_AppName)
             .ConfigureAppServices()
