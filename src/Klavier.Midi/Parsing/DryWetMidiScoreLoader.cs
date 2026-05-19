@@ -10,7 +10,13 @@ public class DryWetMidiScoreLoader : IMidiScoreLoader
     private const int _SustainController = 64; // MIDI CC64
     private const int _SustainOnThreshold = 64;
 
-    public async Task<MidiScore> LoadAsync(string filePath, CancellationToken ct = default)
+    // DryWetMidi's APIs (MidiFile.Read, GetNotes, GetTimedEvents) are all synchronous and can block
+    // the calling thread for hundreds of ms on large files. Offload to the thread pool so the UI
+    // stays responsive while parsing.
+    public Task<MidiScore> LoadAsync(string filePath, CancellationToken ct = default)
+        => Task.Run(() => Load(filePath), ct);
+
+    private static MidiScore Load(string filePath)
     {
         try
         {
