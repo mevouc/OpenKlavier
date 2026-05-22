@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Klavier.Config.Schema;
-using Klavier.Core.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -67,8 +66,8 @@ public class MidiPlayer : IMidiPlayer, IDisposable
     public event Action? Stopped;
     public event Action? Finished;
     public event Action<TimeSpan>? Tick;
-    public event Action<NoteOnEvent>? NoteOn;
-    public event Action<NoteOffEvent>? NoteOff;
+    public event Action<PlaybackNoteOn>? NoteOn;
+    public event Action<PlaybackNoteOff>? NoteOff;
     public event Action<bool>? SustainChanged;
     public event Action<bool>? AudioEnabledChanged;
 
@@ -199,7 +198,7 @@ public class MidiPlayer : IMidiPlayer, IDisposable
         {
             case TimelineEventKind.NoteOff:
                 _activeNotes.Remove(ev.Note);
-                NoteOff?.Invoke(new NoteOffEvent(ev.Note.Pitch, ev.Note.Pitch));
+                NoteOff?.Invoke(new PlaybackNoteOff(ev.Note.Pitch));
                 break;
             case TimelineEventKind.SustainOff:
                 SustainChanged?.Invoke(false);
@@ -209,7 +208,7 @@ public class MidiPlayer : IMidiPlayer, IDisposable
                 break;
             case TimelineEventKind.NoteOn:
                 _activeNotes.Add(ev.Note);
-                NoteOn?.Invoke(new NoteOnEvent(ev.Note.Pitch, ev.Note.Pitch, ev.Note.Velocity));
+                NoteOn?.Invoke(new PlaybackNoteOn(ev.Note.Pitch, ev.Note.Velocity));
                 break;
         }
     }
@@ -222,7 +221,7 @@ public class MidiPlayer : IMidiPlayer, IDisposable
 
         foreach (MidiNote note in _activeNotes)
         {
-            NoteOff?.Invoke(new NoteOffEvent(note.Pitch, note.Pitch));
+            NoteOff?.Invoke(new PlaybackNoteOff(note.Pitch));
         }
         _activeNotes.Clear();
         SustainChanged?.Invoke(false);

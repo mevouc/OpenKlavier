@@ -1,5 +1,3 @@
-using Klavier.Core.Events;
-
 namespace Klavier.Midi.Playback;
 
 public interface IMidiPlayer
@@ -22,8 +20,8 @@ public interface IMidiPlayer
     event Action? Stopped;
     event Action? Finished;
     event Action<TimeSpan>? Tick;
-    event Action<NoteOnEvent>? NoteOn;
-    event Action<NoteOffEvent>? NoteOff;
+    event Action<PlaybackNoteOn>? NoteOn;
+    event Action<PlaybackNoteOff>? NoteOff;
     event Action<bool>? SustainChanged;
     event Action<bool>? AudioEnabledChanged;
 }

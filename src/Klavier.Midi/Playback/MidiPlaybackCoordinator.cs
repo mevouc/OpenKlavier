@@ -1,5 +1,4 @@
 using Klavier.Core.Engine;
-using Klavier.Core.Events;
 using Klavier.Core.Primitives;
 
 namespace Klavier.Midi.Playback;
@@ -24,22 +23,22 @@ public class MidiPlaybackCoordinator
         _engine.PanicRaised += OnEnginePanicRaised;
     }
 
-    private void OnPlayerNoteOn(NoteOnEvent noteEvent)
+    private void OnPlayerNoteOn(PlaybackNoteOn noteEvent)
     {
         if (!_player.AudioEnabled)
         {
             return;
         }
-        _engine.NoteOn(noteEvent.KeyPitch, noteEvent.Velocity, InputSource.Playback);
+        _engine.NoteOn(noteEvent.Pitch, noteEvent.Velocity, InputSource.Playback);
     }
 
-    private void OnPlayerNoteOff(NoteOffEvent noteEvent)
+    private void OnPlayerNoteOff(PlaybackNoteOff noteEvent)
     {
         if (!_player.AudioEnabled)
         {
             return;
         }
-        _engine.NoteOff(noteEvent.KeyPitch, InputSource.Playback);
+        _engine.NoteOff(noteEvent.Pitch, InputSource.Playback);
     }
 
     private void OnPlayerSustainChanged(bool isOn)
