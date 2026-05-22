@@ -7,18 +7,19 @@ Plans 01 and 02 took Klavier from a 2-line console POC to a playable desktop pia
 This plan tackles two axes:
 
 - **UX polish first**: the settings panel gets section headers and friendlier wording so every later iteration that adds a row has a clear home for it.
-- **Passive content second**: the app should be able to load a MIDI file and *show it* as falling note bars above the piano (Synthesia / "Piano from Above" style), with optional audio playback through FluidSynth. Once MIDI file playback is in, three smaller follow-ups finish the feature set promised in plan 02's backlog: recording the user's playing back to a .mid file, upgrading the sustain pedal from binary to continuous, and expanding the piano from 61 to 88 keys.
+- **Passive content second**: the app should be able to load a MIDI file and *show it* as falling note bars above the piano (Synthesia / "Piano from Above" style), with optional audio playback through FluidSynth. Once MIDI file playback is in, four smaller follow-ups finish the feature set promised in plan 02's backlog: reading from an external MIDI keyboard, recording the user's playing back to a .mid file, upgrading the sustain pedal from binary to continuous, and expanding the piano from 61 to 88 keys.
 
 The order is:
 
 1. **Iteration 13 — Settings Panel Refinement** (UX polish, high-level)
 2. **Iteration 14 — MIDI File Playback + Falling-Notes Visualization** (the big one, detailed below)
-3. **Iteration 15 — MIDI Recording** (high-level)
-4. **Iteration 16 — Sustain Half-Pedal** (high-level)
-5. **Iteration 17 — 88-Key Piano** (high-level)
-6. **Backlog one-liners**: MIDI Input, SharpHook
+3. **Iteration 15 — MIDI Input** (high-level)
+4. **Iteration 16 — MIDI Recording** (high-level)
+5. **Iteration 17 — Sustain Half-Pedal** (high-level)
+6. **Iteration 18 — 88-Key Piano** (high-level)
+7. **Backlog one-liners**: SharpHook
 
-Settings-panel polish goes first because iterations 14-17 will each want to add at least one new row (lookahead, audio-enabled persistence, recording defaults, sustain-max-value, possibly a piano-range selector), and those rows land much better once the panel has clear sections to slot them into. MIDI file playback is the natural entry point for the content axis because `.mid` is the de-facto interchange format for piano visualization (Synthesia, Piano from Above, Rousseau-style YouTube tutorials all consume MIDI files), and once `Melanchall.DryWetMidi` is in the solution the recording iteration comes cheaply on top of the same library.
+Settings-panel polish goes first because iterations 14-18 will each want to add at least one new row (lookahead, audio-enabled persistence, MIDI input device selector, recording defaults, sustain-max-value, possibly a piano-range selector), and those rows land much better once the panel has clear sections to slot them into. MIDI file playback is the natural entry point for the content axis because `.mid` is the de-facto interchange format for piano visualization (Synthesia, Piano from Above, Rousseau-style YouTube tutorials all consume MIDI files), and once `Melanchall.DryWetMidi` is in the solution the MIDI input and recording iterations both come cheaply on top of the same library.
 
 ---
 
@@ -87,7 +88,7 @@ Rename the `_XxxLabel` const strings whose current wording is technical. Do not 
 | Topic | Decision |
 |---|---|
 | Note source | `.mid` / `.midi` files only (no live input overlay in this iteration). |
-| MIDI library | **Melanchall.DryWetMidi** (MIT, mature, standard). Central package version added once; reused by iteration 15 and any later MIDI-Input work. |
+| MIDI library | **Melanchall.DryWetMidi** (MIT, mature, standard). Central package version added once; reused by iterations 15 (MIDI input) and 16 (MIDI recording). |
 | Interaction | Passive visualization. A player-bar toggle chooses between **silent** (bars fall, no file audio — only the user's own keys make sound) and **passive-play** (bars fall AND FluidSynth plays the file; user can optionally play along, not required). |
 | Layout | Falling-notes surface docked **above the existing piano, same window**. Toggleable via a new toolbar button. |
 | Bar style | Rounded rectangles, height = note duration, single color = current theme `Accent`. No text labels on bars. |
@@ -115,7 +116,7 @@ Rename the `_XxxLabel` const strings whose current wording is technical. Do not 
 - `src/Klavier.UI/Klavier.UI.csproj`: add `<ProjectReference Include="..\Klavier.Midi\Klavier.Midi.csproj" />`.
 - `src/Klavier/Klavier.csproj`: already transitively references via `Klavier.UI`, but add an explicit reference for DI registration.
 
-**Deferred to a future iteration (MIDI Input):** `Klavier.Midi` already being in the solution makes the later MIDI Input work a drop-in.
+**Deferred to Iteration 15 (MIDI Input):** `Klavier.Midi` already being in the solution makes the MIDI input work a drop-in.
 
 ### Step 2 — Domain + loader (`Klavier.Midi`)
 
@@ -223,7 +224,7 @@ Per-tick, for each in-window note:
 5. Opacity: fully opaque while the bar is wholly above the piano line (`y_bottom <= panelHeight`). Once `y_bottom >= panelHeight`, the bar's bottom is clamped at `panelHeight` and an opacity gradient (1.0 at the top, 0.0 at the bottom) is applied — produces the "passes through the piano key and fades" effect the user chose. When the full note duration has elapsed (`Position > note.Start + note.Duration`), the bar disappears.
 6. Corner radius ~6 px. `DrawRectangle` with a rounded geometry.
 
-Ghost-column rendering: any note whose `NotePitch` is outside `[C2, C7]` draws as a fixed 8 px-wide bar pinned to the left edge (if `pitch < C2`) or right edge (if `pitch > C7`) of `FallingNotesView`. Multiple out-of-range notes at the same time just stack in the same strip — visual clutter is acceptable because this is the "there's stuff outside the piano's range" indicator. Iteration 17 removes the need entirely.
+Ghost-column rendering: any note whose `NotePitch` is outside `[C2, C7]` draws as a fixed 8 px-wide bar pinned to the left edge (if `pitch < C2`) or right edge (if `pitch > C7`) of `FallingNotesView`. Multiple out-of-range notes at the same time just stack in the same strip — visual clutter is acceptable because this is the "there's stuff outside the piano's range" indicator. Iteration 18 removes the need entirely.
 
 ### Step 7 — MainWindow integration
 
@@ -300,7 +301,27 @@ The user's own keypresses continue to flow through `KeyboardInputHandler` -> `IP
 
 ---
 
-## Iteration 15: MIDI Recording (Output)
+## Iteration 15: MIDI Input
+
+**Goal:** Let the user play Klavier through a connected MIDI keyboard / controller. Incoming MIDI note and sustain events flow into `IPianoEngine`, sharing the same audio + visualization path as PC-keyboard input.
+
+- **Mechanism:** New `MidiInputDevice` in `Klavier.Midi/` wraps DryWetMidi's `InputDevice` (from the `Melanchall.DryWetMidi.Multimedia` sub-namespace, which requires a separate native dependency on Linux/macOS — Windows uses WinMM out of the box). On Open, it subscribes to `EventReceived` and forwards `NoteOnEvent` / `NoteOffEvent` / `ControlChangeEvent` (controller 64 only) to `IPianoEngine.NoteOn` / `NoteOff` / `SustainOn` / `SustainOff` — incoming note velocity passes through unmodified. A new `MidiInputCoordinator` polls `InputDevice.GetAll()` every ~2 s for hot-plug, refreshes the device list, and silently falls back to "(none)" if the currently-open device disappears or if `Open` throws (device locked by another app, driver error). DryWetMidi fires `EventReceived` on a non-UI thread, so the coordinator marshals each event to `Avalonia.Threading.Dispatcher.UIThread` before calling into `IPianoEngine` — consistent with how PC-keyboard input is already dispatched.
+- **UI:** New row in the settings panel's **Sound & Playback** section: a `ComboBox` listing detected MIDI input devices plus a "(none)" entry. Selecting a device hot-swaps (closes the previous, opens the new); selecting "(none)" disconnects. A small dot indicator shows whether a device is currently open and receiving events. Selected device name persisted via `IUserSettingsService` so the same device is re-opened at next startup (or falls back to "(none)" if missing).
+- **Audio mute toggle:** Second new row immediately below the device selector — a `ToggleSwitch` defaulting **on**. When **off**, notes originating from the MIDI device do *not* produce sound via `FluidSynthAudioOutput`, but all other reactions are identical: the piano view still highlights pressed keys, the falling-notes view (Iter 14) still gets the user-along events, and the future recorder (Iter 16) still captures them. PC-keyboard input is unaffected — pressing a PC key still produces audio regardless of this toggle. Use case: the user's MIDI keyboard is a digital piano with built-in speakers (or routed through external audio gear) and they don't want Klavier doubling the sound. Cleanest routing approach (decide at impl time): `MidiInputCoordinator` forwards the MIDI events directly to the non-audio handlers (`PianoView`, recorder, falling-notes view) when muted, bypassing `IPianoEngine`'s fan-out so `FluidSynthAudioOutput` never sees them; alternative is tagging the event source on `NoteOnEvent` and letting the audio handler filter — leaning toward the coordinator approach since it keeps the audio handler unaware of provenance.
+- **Scope:** v1 — Note On/Off and CC64 only. No pitch bend, modulation wheel, aftertouch, program change, or MIDI Thru. One device at a time; all 16 MIDI channels accepted. The existing `Transpose` setting still applies, so external-device pitches are transposed identically to PC-keyboard input. `Piano:Velocity` continues to apply to PC-keyboard input only — the MIDI device's per-note velocity is preserved end-to-end.
+
+### Key files to create / modify
+- `src/Klavier.Midi/MidiInputDevice.cs` — new; DryWetMidi wrapper exposing `Open(deviceName)`, `Close()`, and the three forwarding events
+- `src/Klavier.Midi/Ports/IMidiInputCoordinator.cs` — new; UI-facing port (enumerate devices, open/close, raise `DevicesChanged` for hot-plug)
+- `src/Klavier.Midi/MidiInputCoordinator.cs` — new; implementation owns hot-plug polling, thread-marshalling, and routes events either through `IPianoEngine` (normal) or directly to non-audio handlers (when audio muted)
+- `src/Klavier.Midi/ServiceCollectionExtensions.cs` — register the new types in `AddKlavierMidi`
+- `src/Klavier.Config/MidiInputConfig.cs` — new; `MidiInputConfig` with `SelectedDevice { get; init; } = "";` and `AudioEnabled { get; init; } = true;`
+- `src/Klavier/appsettings.json` — add `MidiInput` section
+- `src/Klavier.UI/Views/Settings/SettingsPanel.cs` + `SettingsPanel.Helpers.cs` — device-selector row + audio-mute toggle row + connection indicator
+
+---
+
+## Iteration 16: MIDI Recording (Output)
 
 **Goal:** Let the user record everything they play into a `.mid` file, from pressing Record to pressing Stop.
 
@@ -317,7 +338,7 @@ The user's own keypresses continue to flow through `KeyboardInputHandler` -> `IP
 
 ---
 
-## Iteration 16: Sustain Half-Pedal
+## Iteration 17: Sustain Half-Pedal
 
 **Goal:** Upgrade sustain from binary on/off to continuous 0-127, exposing partial-pedal nuance that FluidSynth already supports.
 
@@ -337,7 +358,7 @@ The user's own keypresses continue to flow through `KeyboardInputHandler` -> `IP
 
 ---
 
-## Iteration 17: 88-Key Piano
+## Iteration 18: 88-Key Piano
 
 **Goal:** Expand the piano from 61 keys (C2 - C7) to 88 keys (A0 - C8). Matches a real acoustic piano and removes the need for the ghost-column fallback introduced in Iteration 14.
 
@@ -355,11 +376,10 @@ The user's own keypresses continue to flow through `KeyboardInputHandler` -> `IP
 
 ---
 
-## Iteration 18+ (Backlog)
+## Iteration 19+ (Backlog)
 
 One-liners. No detailed design yet.
 
-- **MIDI Input** — Read note-on/off from an external MIDI keyboard via DryWetMidi; surface device selection in the settings panel; preserve device velocity on its way through `PianoEngine`.
 - **SharpHook (Global Keyboard Capture)** — New `Klavier.GlobalInput` project using SharpHook to capture PC keyboard input even when Klavier isn't the focused window.
 
 ---
