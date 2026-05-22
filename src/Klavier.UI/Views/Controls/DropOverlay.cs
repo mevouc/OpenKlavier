@@ -27,20 +27,20 @@ public class DropOverlay : Border
             Text = viewModel.DropOverlayLabel,
             FontSize = _LabelFontSize,
             FontWeight = FontWeight.Bold,
-            Foreground = new SolidColorBrush(ThemePaletteProvider.TextPrimary),
+            Foreground = new SolidColorBrush(ThemePaletteProvider.Inverse),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
 
         Rectangle dashedFrame = new()
         {
-            Stroke = new SolidColorBrush(ThemePaletteProvider.TextPrimary),
+            Stroke = new SolidColorBrush(ThemePaletteProvider.Inverse),
             StrokeThickness = _DashedFrameStrokeThickness,
             StrokeDashArray = [6, 4],
             Margin = new Thickness(2),
         };
 
-        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground) { Opacity = 0.7 };
+        Background = new SolidColorBrush(ThemePaletteProvider.MediumContrasted) { Opacity = 0.7 };
         IsHitTestVisible = false;
         IsVisible = viewModel.IsDropOverlayVisible;
         Child = new Grid { Children = { dashedFrame, _label } };

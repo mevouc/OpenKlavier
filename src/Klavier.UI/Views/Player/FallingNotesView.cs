@@ -15,8 +15,10 @@ namespace Klavier.UI.Views.Player;
 public class FallingNotesView : Control
 {
     private static readonly SolidColorBrush _NotesColorBrush = new(ThemePaletteProvider.Accent);
+    private static readonly SolidColorBrush _PressedNotesColorBrush = new(ThemePaletteProvider.AccentContrasted);
 
     private readonly PlayerViewModel _viewModel;
+    private readonly IPianoKeyState _pianoKeyState;
     private readonly IOptionsMonitor<PlayerConfig> _playerConfig;
 
     // Cursor over score.Notes (sorted by Start): notes before this index are guaranteed to have ended.
@@ -24,9 +26,10 @@ public class FallingNotesView : Control
     private int _firstActiveIndex;
     private TimeSpan _lastRenderPosition;
 
-    public FallingNotesView(PlayerViewModel viewModel, IOptionsMonitor<PlayerConfig> playerConfig)
+    public FallingNotesView(PlayerViewModel viewModel, IPianoKeyState pianoKeyState, IOptionsMonitor<PlayerConfig> playerConfig)
     {
         _viewModel = viewModel;
+        _pianoKeyState = pianoKeyState;
         _playerConfig = playerConfig;
 
         ClipToBounds = true;
@@ -114,13 +117,18 @@ public class FallingNotesView : Control
             double height = barBottomY - barTopY;
 
             Rect rect = new(x, barTopY, width, height);
-            context.DrawRectangle(_NotesColorBrush, null, rect, Constants.CornerRadius, Constants.CornerRadius);
+            // Highlight the note while it is at the piano line and its pitch is actively pressed
+            // (either by the player when audio is enabled, or by the user).
+            SolidColorBrush brush = secondsUntilStart <= 0 && _pianoKeyState.IsPitchPressed(note.Pitch)
+                ? _PressedNotesColorBrush
+                : _NotesColorBrush;
+            context.DrawRectangle(brush, null, rect, Constants.CornerRadius, Constants.CornerRadius);
         }
     }
 
     private static void DrawColumnHints(DrawingContext context, double panelWidth, double panelHeight)
     {
-        IBrush dividerBrush = new SolidColorBrush(ThemePaletteProvider.Divider);
+        IBrush dividerBrush = new SolidColorBrush(ThemePaletteProvider.Neutral);
         Pen solidPen = new(dividerBrush, 1.0);
         Pen dashPen = new(dividerBrush, 1.0, new DashStyle([5, 8], 0));
 

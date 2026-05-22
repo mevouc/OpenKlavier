@@ -11,7 +11,7 @@ using Klavier.Config.Schema;
 
 namespace Klavier.UI.ViewModels;
 
-public class PianoViewModel : INoteEventHandler
+public class PianoViewModel : INoteEventHandler, IPianoKeyState
 {
     private readonly FrozenDictionary<NotePitch, PianoKeyViewModel> _keysByPitch;
     private readonly IOptionsMonitor<UIConfig> _uiConfig;
@@ -21,6 +21,9 @@ public class PianoViewModel : INoteEventHandler
     public IReadOnlyList<PianoKeyViewModel> Keys { get; }
     public bool IsSustainOn { get; private set; }
     public event Action<bool>? SustainChanged;
+
+    public bool IsPitchPressed(NotePitch pitch)
+        => _keysByPitch.TryGetValue(pitch, out PianoKeyViewModel? key) && key.IsPressed;
 
     public PianoViewModel(
         IPianoEngine pianoEngine,

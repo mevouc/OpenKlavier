@@ -127,7 +127,7 @@ public class MainWindowLayout
         Border line = new()
         {
             Height = 1,
-            Background = new SolidColorBrush(ThemePaletteProvider.Divider),
+            Background = new SolidColorBrush(ThemePaletteProvider.Medium),
         };
 
         Grid grid = new()

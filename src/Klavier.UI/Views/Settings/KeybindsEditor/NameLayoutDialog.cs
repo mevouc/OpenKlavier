@@ -22,7 +22,7 @@ public class NameLayoutDialog : Window
     private const double _ControlSpacing = 8;
     private const double _ButtonsRowSpacing = 8;
 
-    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.Inverse);
     private static readonly SolidColorBrush _WarningBrush = new(Colors.Orange);
     private static readonly SolidColorBrush _ErrorBrush = new(Colors.IndianRed);
 
@@ -44,7 +44,7 @@ public class NameLayoutDialog : Window
         Title = _WindowTitle;
         Width = _DialogWidth;
         Height = _DialogHeight;
-        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.MediumContrasted);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         CanResize = false;
 

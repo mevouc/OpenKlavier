@@ -13,11 +13,11 @@ namespace Klavier.UI.Views.Settings.KeybindsEditor;
 
 public partial class PcKeyboardSchema
 {
-    private static readonly SolidColorBrush _BoundKeyBorderBrush = new(ThemePaletteProvider.TextPrimary);
-    private static readonly SolidColorBrush _UnboundKeyBorderBrush = new(ThemePaletteProvider.NeutralSurface);
+    private static readonly SolidColorBrush _BoundKeyBorderBrush = new(ThemePaletteProvider.Inverse);
+    private static readonly SolidColorBrush _UnboundKeyBorderBrush = new(ThemePaletteProvider.Neutral);
     private static readonly SolidColorBrush _ActiveBorderBrush = new(UserPalette.Accent);
-    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
-    private static readonly SolidColorBrush _HomeRowMarkerBrush = new(ThemePaletteProvider.NeutralSurface);
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.Inverse);
+    private static readonly SolidColorBrush _HomeRowMarkerBrush = new(ThemePaletteProvider.Neutral);
 
     private const double _KeyWidth = 46;
     private const double _KeyHeight = _KeyWidth;

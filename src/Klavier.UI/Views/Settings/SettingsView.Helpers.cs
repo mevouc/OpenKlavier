@@ -14,11 +14,11 @@ namespace Klavier.UI.Views.Settings;
 
 public partial class SettingsView
 {
-    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
-    private static readonly SolidColorBrush _SubtextBrush = new(ThemePaletteProvider.TextPrimary) { Opacity = 0.7 };
-    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
-    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
-    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.Inverse);
+    private static readonly SolidColorBrush _SubtextBrush = new(ThemePaletteProvider.Inverse) { Opacity = 0.7 };
+    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.Contrasted);
+    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.Neutral);
+    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.AccentNeutral);
     private const double _LabelWidth = 130;
     private const double _ValueWidth = 40;
     private const double _MinRowHeight = 32;

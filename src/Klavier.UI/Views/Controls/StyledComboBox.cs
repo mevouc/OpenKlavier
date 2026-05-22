@@ -7,9 +7,9 @@ namespace Klavier.UI.Views.Controls;
 
 public class StyledComboBox : ComboBox
 {
-    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
-    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
-    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.HoverHighlight);
+    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.Contrasted);
+    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.Neutral);
+    private static readonly SolidColorBrush _HoverHighlightBrush = new(ThemePaletteProvider.AccentNeutral);
 
     // Inherit the Fluent ComboBox control template (Avalonia style matching is exact-type by default).
     protected override Type StyleKeyOverride => typeof(ComboBox);

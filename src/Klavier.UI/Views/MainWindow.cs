@@ -42,7 +42,7 @@ public class MainWindow : Window
         Height = _DefaultHeight;
         MinWidth = _MinWidth;
         MinHeight = _MinHeight;
-        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.MediumContrasted);
         Topmost = viewModel.IsTopmost;
         Focusable = true;
 

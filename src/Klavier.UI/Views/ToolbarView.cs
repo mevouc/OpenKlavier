@@ -41,7 +41,7 @@ public class ToolbarView : Border
         IOptionsMonitor<UIConfig> uiConfig,
         IOptionsMonitor<PlayerConfig> playerConfig)
     {
-        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.MediumContrasted);
         Padding = new Thickness(8, 4);
 
         TextButton panicButton = new("Panic");

@@ -36,7 +36,7 @@ public class KeybindsEditorWindow : Window
     private const double _ModifierLabelRightMargin = 8;
     private const double _ButtonsRowSpacing = 8;
 
-    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.Inverse);
 
     private readonly string? _existingLayoutName;
     private readonly KeybindsEditSession _session;
@@ -98,7 +98,7 @@ public class KeybindsEditorWindow : Window
         Height = _DefaultHeight;
         MinWidth = _MinWidth;
         MinHeight = _MinHeight;
-        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.MediumContrasted);
 
         Content = BuildLayout();
         _statusText.Text = _IdleStatusText;

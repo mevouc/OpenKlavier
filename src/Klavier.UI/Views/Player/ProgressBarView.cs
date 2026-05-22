@@ -19,7 +19,7 @@ public class ProgressBarView : Grid
         _viewModel = viewModel;
 
         Height = _Height;
-        Background = new SolidColorBrush(ThemePaletteProvider.Divider);
+        Background = new SolidColorBrush(ThemePaletteProvider.Medium);
 
         _fill = new Rectangle
         {

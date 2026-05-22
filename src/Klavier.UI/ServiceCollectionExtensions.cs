@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IKeyboardMappingService, KeyboardMappingService>();
         services.AddSingleton<PianoViewModel>();
+        services.AddSingleton<IPianoKeyState>(sp => sp.GetRequiredService<PianoViewModel>());
         services.AddSingleton<PlayerViewModel>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<KeyboardInputHandler>();

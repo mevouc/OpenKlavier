@@ -10,7 +10,7 @@ public class KeyboardMapping
     public FrozenDictionary<PhysicalKey, KeyMappingEntry> BlackKeys { get; init; } = FrozenDictionary<PhysicalKey, KeyMappingEntry>.Empty;
     public KeyModifiers BlackKeyModifier { get; init; } = KeyModifiers.Shift;
 
-    public Dictionary<NotePitch, string> ToLabelsByPitch()
+    public IReadOnlyDictionary<NotePitch, string> ToLabelsByPitch()
     {
         Dictionary<NotePitch, string> labels = [];
 

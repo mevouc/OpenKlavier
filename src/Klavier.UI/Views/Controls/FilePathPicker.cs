@@ -11,9 +11,9 @@ public class FilePathPicker : Border
 {
     private const double _DefaultMinWidth = 200;
 
-    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.ContrastedSurface);
-    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.NeutralSurface);
-    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.TextPrimary);
+    private static readonly SolidColorBrush _ContrastedSurfaceBrush = new(ThemePaletteProvider.Contrasted);
+    private static readonly SolidColorBrush _NeutralSurfaceBrush = new(ThemePaletteProvider.Neutral);
+    private static readonly SolidColorBrush _TextBrush = new(ThemePaletteProvider.Inverse);
 
     // Folder glyph (Material Icons "folder", 24x24 viewport).
     private static readonly Geometry _FolderGeometry = Geometry.Parse(

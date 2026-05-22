@@ -92,7 +92,7 @@ public partial class SettingsView : Border
         _keyboardMappingService = keyboardMappingService;
         _createKeybindsEditor = createKeybindsEditor;
 
-        Background = new SolidColorBrush(ThemePaletteProvider.AppBackground);
+        Background = new SolidColorBrush(ThemePaletteProvider.MediumContrasted);
         Padding = new Thickness(12, 8);
         IsVisible = false;
 

@@ -8,12 +8,12 @@ namespace Klavier.UI.Views.Controls;
 
 public abstract class ActivableControl : Border
 {
-    private static readonly SolidColorBrush _DefaultBackgroundBrush = new(ThemePaletteProvider.NeutralSurface);
-    private static readonly SolidColorBrush _ActiveBackgroundBrush = new(ThemePaletteProvider.HoverHighlight);
-    private static readonly SolidColorBrush _DefaultBorderBrush = new(ThemePaletteProvider.NeutralSurface);
+    private static readonly SolidColorBrush _DefaultBackgroundBrush = new(ThemePaletteProvider.Neutral);
+    private static readonly SolidColorBrush _ActiveBackgroundBrush = new(ThemePaletteProvider.AccentNeutral);
+    private static readonly SolidColorBrush _DefaultBorderBrush = new(ThemePaletteProvider.Neutral);
     private static readonly SolidColorBrush _ActiveBorderBrush = new(ThemePaletteProvider.Accent);
 
-    protected static readonly SolidColorBrush DefaultTextBrush = new(ThemePaletteProvider.TextPrimary);
+    protected static readonly SolidColorBrush DefaultTextBrush = new(ThemePaletteProvider.Inverse);
     protected static readonly SolidColorBrush ActiveTextBrush = new(ThemePaletteProvider.AccentLight1);
 
     private bool _isActive;
