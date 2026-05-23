@@ -303,21 +303,413 @@ The user's own keypresses continue to flow through `KeyboardInputHandler` -> `IP
 
 ## Iteration 15: MIDI Input
 
-**Goal:** Let the user play Klavier through a connected MIDI keyboard / controller. Incoming MIDI note and sustain events flow into `IPianoEngine`, sharing the same audio + visualization path as PC-keyboard input.
+**Goal:** Let the user play Klavier through a connected MIDI keyboard / controller. Incoming Note On / Note Off / CC64 (sustain) events from one selected device flow through `IPianoEngine` and share the audio + visualization fan-out already used by PC-keyboard and file-playback sources. A dedicated audio-mute toggle lets users with a digital piano that has its own speakers silence Klavier's FluidSynth output for MIDI-device events while still highlighting the piano view and feeding the future recorder.
 
-- **Mechanism:** New `MidiInputDevice` in `Klavier.Midi/` wraps DryWetMidi's `InputDevice` (from the `Melanchall.DryWetMidi.Multimedia` sub-namespace, which requires a separate native dependency on Linux/macOS — Windows uses WinMM out of the box). On Open, it subscribes to `EventReceived` and forwards `NoteOnEvent` / `NoteOffEvent` / `ControlChangeEvent` (controller 64 only) to `IPianoEngine.NoteOn` / `NoteOff` / `SustainOn` / `SustainOff` — incoming note velocity passes through unmodified. A new `MidiInputCoordinator` polls `InputDevice.GetAll()` every ~2 s for hot-plug, refreshes the device list, and silently falls back to "(none)" if the currently-open device disappears or if `Open` throws (device locked by another app, driver error). DryWetMidi fires `EventReceived` on a non-UI thread, so the coordinator marshals each event to `Avalonia.Threading.Dispatcher.UIThread` before calling into `IPianoEngine` — consistent with how PC-keyboard input is already dispatched.
-- **UI:** New row in the settings panel's **Sound & Playback** section: a `ComboBox` listing detected MIDI input devices plus a "(none)" entry. Selecting a device hot-swaps (closes the previous, opens the new); selecting "(none)" disconnects. A small dot indicator shows whether a device is currently open and receiving events. Selected device name persisted via `IUserSettingsService` so the same device is re-opened at next startup (or falls back to "(none)" if missing).
-- **Audio mute toggle:** Second new row immediately below the device selector — a `ToggleSwitch` defaulting **on**. When **off**, notes originating from the MIDI device do *not* produce sound via `FluidSynthAudioOutput`, but all other reactions are identical: the piano view still highlights pressed keys, the falling-notes view (Iter 14) still gets the user-along events, and the future recorder (Iter 16) still captures them. PC-keyboard input is unaffected — pressing a PC key still produces audio regardless of this toggle. Use case: the user's MIDI keyboard is a digital piano with built-in speakers (or routed through external audio gear) and they don't want Klavier doubling the sound. Cleanest routing approach (decide at impl time): `MidiInputCoordinator` forwards the MIDI events directly to the non-audio handlers (`PianoView`, recorder, falling-notes view) when muted, bypassing `IPianoEngine`'s fan-out so `FluidSynthAudioOutput` never sees them; alternative is tagging the event source on `NoteOnEvent` and letting the audio handler filter — leaning toward the coordinator approach since it keeps the audio handler unaware of provenance.
-- **Scope:** v1 — Note On/Off and CC64 only. No pitch bend, modulation wheel, aftertouch, program change, or MIDI Thru. One device at a time; all 16 MIDI channels accepted. The existing `Transpose` setting still applies, so external-device pitches are transposed identically to PC-keyboard input. `Piano:Velocity` continues to apply to PC-keyboard input only — the MIDI device's per-note velocity is preserved end-to-end.
+### Design decisions (locked in)
 
-### Key files to create / modify
-- `src/Klavier.Midi/MidiInputDevice.cs` — new; DryWetMidi wrapper exposing `Open(deviceName)`, `Close()`, and the three forwarding events
-- `src/Klavier.Midi/Ports/IMidiInputCoordinator.cs` — new; UI-facing port (enumerate devices, open/close, raise `DevicesChanged` for hot-plug)
-- `src/Klavier.Midi/MidiInputCoordinator.cs` — new; implementation owns hot-plug polling, thread-marshalling, and routes events either through `IPianoEngine` (normal) or directly to non-audio handlers (when audio muted)
-- `src/Klavier.Midi/ServiceCollectionExtensions.cs` — register the new types in `AddKlavierMidi`
-- `src/Klavier.Config/MidiInputConfig.cs` — new; `MidiInputConfig` with `SelectedDevice { get; init; } = "";` and `AudioEnabled { get; init; } = true;`
+| Topic | Decision |
+|---|---|
+| MIDI library | Reuse `Melanchall.DryWetMidi` already in `Klavier.Midi` from Iteration 14. Input device support lives in the `Melanchall.DryWetMidi.Multimedia` sub-namespace which uses WinMM on Windows out of the box. Linux/macOS need an extra native dependency — accepted as a follow-up if/when Klavier is built for those platforms. Windows-first for v1. |
+| Project placement | All new code lives in `Klavier.Midi` (no new project). New `Klavier.Midi/Input/` subfolder mirrors the existing `Loading/`, `Parsing/`, `Playback/` layout. |
+| Audio-mute routing | **Source-tagged + audio-side filter.** `InputSource` enum gains a `MidiInput` value; `NoteOnEvent` carries a `Source` property; `INoteEventHandler.OnSustainChanged` takes a `source` parameter. `FluidSynthAudioOutput` reads `MidiInputConfig.AudioEnabled` via `IOptionsMonitor` and skips events whose source is `MidiInput` when muted. Engine fan-out stays unchanged — handlers that don't care about source (PianoViewModel) keep working as-is. Chosen over coordinator-bypass routing because handlers are not individually addressable from `Klavier.Midi` and bypassing the engine would fork the existing fan-out model. |
+| Hot-plug | `MidiInputCoordinator` runs a background `Timer` (~2 s interval) calling DryWetMidi's `InputDevice.GetAll()`, raises `DevicesChanged` when the set changes, and falls back to "(none)" if the open device disappears or `Open` throws. Disconnect is **surfaced** via a brief inline notification next to the device combobox (see Step 7) so the user notices the cable / driver issue. Chosen over refresh-on-demand: matches the plan's default and avoids surfacing a refresh button. Replugged devices are **not** auto-reopened — selection becomes "(none)" and the user must reselect. |
+| Audio-mute scope | App-wide single `MidiInputConfig.AudioEnabled` bool. No per-device storage. |
+| Thread model | DryWetMidi fires `EventReceived` on a non-UI thread. `Klavier.Midi` stays UI-free: the coordinator forwards events directly into `IPianoEngine` on whatever thread they arrive. Existing handlers already marshal to the UI thread themselves (`PianoViewModel` uses `Dispatcher.UIThread.Post`, `FluidSynthAudioOutput` is thread-agnostic). No `Avalonia.Threading` dependency creeps into `Klavier.Midi`. |
+| MIDI scope | Note On / Note Off / CC64 (sustain) **plus CC120 (All Sound Off) and CC123 (All Notes Off)** — the latter two are treated identically: `engine.AllNotesOff(InputSource.MidiInput) + engine.SustainOff(InputSource.MidiInput)`. Real-world hardware often sends CC123 on reset, mode-change, or power-up; honoring both avoids surprising silent drops. All 16 MIDI channels accepted (no channel filtering). No pitch bend, modulation wheel, aftertouch, program change, or MIDI Thru. |
+| Velocity | Device's per-note velocity is preserved end-to-end. `Piano:Velocity` continues to apply only when no explicit velocity is provided (i.e. only PC-keyboard input). |
+| Transpose | The engine applies `Piano:Transpose` to every source. MIDI-device pitches are transposed identically to PC-keyboard input. |
+| Sustain when muted | When `MidiInput:AudioEnabled = false`, the **coordinator does not forward sustain events into `IPianoEngine` at all** (notes still flow through normally so the piano view highlights). The engine's aggregate sustain therefore never includes the muted device's sustain — no hung-note edge case can occur. **Two v1 limitations** flow from this: (a) the recorder (Iter 16) will NOT capture sustain from the device while muted; (b) "mute-toggle ghost-off" — if the user mutes while physically holding the pedal, then unmutes without first releasing, the next pedal-up does nothing because the engine never knew the pedal was down. Workaround: after toggling Play MIDI input back on, release and repress the pedal to re-engage. Both limitations documented in the in-app tooltip if space allows. Note events stay routed through the engine even when muted so the piano view + future recorder still see them; only sustain has the asymmetry. |
+| Duplicate device names | Accepted limitation. If two same-model controllers are connected, the dropdown shows two entries with identical text and the coordinator opens whichever DryWetMidi's `InputDevice.GetAll()` enumerates first matching the persisted name. Behavior with duplicates is documented as undefined for v1 — rare enough not to engineer for. |
+| Open failures | When `TryOpen` throws (device locked by another app, driver error, device disappears between poll and open), the coordinator logs the failure, leaves `CurrentOpenDevice` null, and raises a `DeviceOpenFailed(string deviceName, string reason)` event. The settings UI displays a brief warning-colored notification in the same inline TextBlock slot used for disconnects (`"Cannot open {name}"`), auto-cleared after ~4 s. **No auto-retry** — user must reselect to try again. Keeps the failure surface visible without an infinite-loop risk. |
+| Held-state drain on transitions | Because the device can vanish mid-press or the mute toggle can intercept sustain events upstream of the engine, the coordinator must proactively drain the engine of any held MidiInput state at well-defined transitions. Rules: (a) **on disconnect** AND (b) **when the user selects "(none)"** — drain BOTH notes (`engine.AllNotesOff(InputSource.MidiInput)`) AND sustain (`engine.SustainOff(InputSource.MidiInput)`), because no further events will come from the device. (c) **When `AudioEnabled` toggles true→false** — drain SUSTAIN ONLY (`engine.SustainOff(InputSource.MidiInput)`), not notes: NoteOff events still flow through the coordinator unconditionally (mute only filters at the audio side), so held notes will release naturally when the user releases them. (d) **`AudioEnabled` false→true** — no drain needed; the engine's MidiInput sustain state was never tracked during the muted period. |
+| Engine concurrency | Iter 15 adds a third writer thread to `PianoEngine`'s active-notes dicts (PC keyboard on UI thread, MidiPlayer on Timer threadpool, DryWetMidi on its callback thread). The pre-existing two-writer race was latent; three writers makes it likelier to hit dict corruption under chord-stress. Iter 15 adds a single `Lock` field in `PianoEngine` and wraps the mutating methods (`NoteOn`, `NoteOff`, `AllNotesOff`, `SustainOn`, `SustainOff`, `ToggleSustain`, `Panic`, `OnPianoConfigChanged`). Performance cost is negligible — piano events are sparse. |
+| DI disposal on exit (partial fix via C1) | The `using IHost host` + `host.StopAsync()` added by C1 incidentally disposes the `IServiceProvider`, which disposes all `IDisposable` singletons. Our new `MidiInputCoordinator` and `DryWetMidiInputDevice` implement `IDisposable` and benefit from this. Pre-existing singletons that DON'T implement `IDisposable` (e.g. `PianoEngine`, `MidiPlaybackCoordinator`) still leak — a broader audit is owed but deferred from this iteration. |
+| Testing approach | Manual end-to-end testing with real MIDI hardware. No unit tests for the coordinator and no virtual-port harness in v1. Rationale: this iteration is a thin UI/coordination layer over a native lib (DryWetMidi Multimedia / WinMM) — most failure modes only surface against real hardware, and unit tests of the coordinator alone wouldn't catch them. The Step 10 verification checklist is the contract. |
+| No em-dash in UI strings | Tooltip / label text uses " - " not " — ". |
+
+### Step 0 — POC: validate the DryWetMidi pipeline end-to-end
+
+**Why this step exists.** Before investing in the proper port/adapter split (Step 4), coordinator (Step 5), config-driven device selection (Steps 2 + 7), audio mute (Steps 3 + 8), hot-plug, drain, and UI, validate that DryWetMidi can actually open a connected device on this machine, receive Note On / Note Off / CC64 events with acceptable latency, and route them into the engine. Risk-mitigation slice — gives an early "go / no-go" on the native lib.
+
+**Scope.** Hardcoded single-device path: at app startup, auto-pick the first device returned by `InputDevice.GetAll()`, open it, route events. No config, no UI, no error recovery beyond "log and bail if no device found". Every artifact created in Step 0 is deleted by the end of Step 6 — see the **POC removal manifest** below.
+
+**POC removal manifest.** Every line of POC-specific code introduced in Step 0 is removed by the time iteration 15 is complete. Tracked precisely so we can verify zero leftovers:
+
+| Artifact (introduced in Step 0) | Removed in |
+|---|---|
+| `src/Klavier.Midi/Input/MidiInputPoc.cs` (the whole file) | **Step 4** (replaced by `IMidiInputDevice` + `DryWetMidiInputDevice`) |
+| `services.AddSingleton<MidiInputPoc>();` in `Klavier.Midi/ServiceCollectionExtensions.cs` | **Step 4** (replaced by the new port + adapter registration) |
+| `InitializeMidiInputPoc` extension method in `Klavier/Extensions/HostExtensions.cs` | **Step 6** (the coordinator is started via `IHostedService` instead, so no eager-resolve helper needed) |
+| `.InitializeMidiInputPoc()` call in `Klavier/Program.cs`'s init chain | **Step 6** (same reason) |
+
+The minimal Core slice that Step 0 adds to `PianoEngine.cs` (third dict, third sustain field, switch arms, `IsSustainOn` aggregate, `PanicAllNotesOff` guard extension) is NOT removed — it is **kept and built upon** by Step 1 (which refactors it further: dict type change, `Enum.GetValues<InputSource>()` iteration, concurrency lock). The `MidiInput` enum value added to `InputSource.cs` is likewise kept. Step 6's verification confirms only the POC-specific artifacts are gone, not the Core extensions.
+
+**`src/Klavier.Core/Primitives/InputSource.cs`** — Add `MidiInput` as the third enum value. (Step 1 builds further on this; for now we just need the enum value to exist.)
+
+**`src/Klavier.Core/Engine/PianoEngine.cs`** — Minimum needed to make `MidiInput` a usable source so the POC doesn't crash on the first event. Step 1 will refactor / extend these:
+
+- Add a third active-notes field: `private readonly Dictionary<NotePitch, int> _midiInputActiveNotes = [];` (same type as the existing two dicts — Step 1 changes the type later).
+- Add a `MidiInput => _midiInputActiveNotes` arm to the `GetActiveNotes(source)` switch.
+- Add `private bool _midiInputSustainOn;` and extend the `SustainOn` / `SustainOff` switches with `case InputSource.MidiInput: _midiInputSustainOn = true/false; break;`.
+- Extend `IsSustainOn` to: `IsSustainOn => _userSustainOn || _playerSustainOn || _midiInputSustainOn;`.
+- Extend the `PanicAllNotesOff` early-return guard and the clear loop to include `_midiInputActiveNotes`. (Step 1 will replace these hardcoded lists with iteration over `Enum.GetValues<InputSource>()` — for now, the manual addition is fine.)
+
+**`src/Klavier.Midi/Input/MidiInputPoc.cs`** (new, **temporary** — removed in Step 4). Singleton with the minimum needed to wire DryWetMidi to the engine.
+
+- Constructor: `(IPianoEngine engine, ILogger<MidiInputPoc> logger)`.
+- On construction:
+    1. Call `Melanchall.DryWetMidi.Multimedia.InputDevice.GetAll()`.
+    2. If empty, log a warning and bail (no exception — the app still runs normally without MIDI).
+    3. Pick the first device, instantiate via `InputDevice.GetByName(...)`, subscribe to `EventReceived`, call `StartEventsListening()`.
+    4. Log: `"POC opened MIDI input device {Name}"`.
+- `EventReceived` handler pattern-matches on `Melanchall.DryWetMidi.Core.*`:
+    - `NoteOnEvent` → `_engine.NoteOn(new NotePitch(noteNumber), new NoteVelocity(velocity), InputSource.MidiInput)`.
+    - `NoteOffEvent` → `_engine.NoteOff(new NotePitch(noteNumber), InputSource.MidiInput)`.
+    - `ControlChangeEvent` with `ControlNumber == 64` → `_engine.SustainOn(InputSource.MidiInput)` when `value >= 64`, otherwise `_engine.SustainOff(InputSource.MidiInput)`.
+    - All other events: ignored.
+- Implements `IDisposable`: `StopEventsListening`, unsubscribe, dispose the device.
+
+**`src/Klavier.Midi/ServiceCollectionExtensions.cs`** — Register the POC as a singleton: `services.AddSingleton<MidiInputPoc>();`. (Removed in Step 4 when the class goes away.)
+
+**`src/Klavier/Extensions/HostExtensions.cs`** — Add a new extension method mirroring `InitializeMidiPlaybackCoordinator`:
+
+```csharp
+public static IHost InitializeMidiInputPoc(this IHost host)
+{
+    host.Services.GetRequiredService<MidiInputPoc>();
+    return host;
+}
+```
+
+**`src/Klavier/Program.cs`** — Add `.InitializeMidiInputPoc()` to the existing chain after `InitializeMidiPlaybackCoordinator()`.
+
+**Verification.**
+
+1. Build: `dotnet build` succeeds.
+2. Launch with no MIDI device connected. Console logs `"No MIDI input devices found"` (or equivalent). App runs normally; PC keyboard still works.
+3. Plug a device in, then restart. Console logs `"POC opened MIDI input device {Name}"` at startup. Press a key on the device — piano view highlights, FluidSynth plays the note at the device's velocity. Release — piano de-highlights, note decays.
+4. Press the device's sustain pedal — held notes ring through. Release — notes decay.
+5. PC keyboard input still works. Spacebar sustain still works. Panic still works.
+
+**What this step deliberately does NOT do** (and which later steps cover):
+- Hot-plug detection — Step 5.
+- Config-driven device selection / persistence across launches — Steps 2 + 7.
+- Audio mute toggle — Steps 3 + 8.
+- Open-failure / disconnect notifications — Steps 5 + 7.
+- Held-state drain — Step 5.
+- Settings UI (combobox, status dot, notifications) — Steps 7 + 8.
+- Concurrency lock in `PianoEngine`, dict type change, full source propagation on `NoteOnEvent` / `OnSustainChanged` — Step 1.
+
+**Go / no-go signal.** If Step 0 fails (DryWetMidi can't open the device, latency is unacceptable, EventReceived doesn't fire), iter 15's whole architecture is in question and we revisit the library choice before continuing.
+
+### Step 1 — Core: extend events with `InputSource`
+
+Step 0 already added the `MidiInput` enum value and the minimal per-source fields in `PianoEngine` so the POC routes correctly. Step 1 completes the source-propagation story, refactors the panic guard, fixes the `AllNotesOff` stuck-highlight bug, and adds the concurrency lock. Build stays green, no behavior change beyond what Step 0 already enables.
+
+**`src/Klavier.Core/Primitives/InputSource.cs`** — Add `MidiInput` as the third enum value.
+
+**`src/Klavier.Core/Events/NoteOnEvent.cs`** — Add `InputSource Source` as the last positional property of the record struct.
+
+**`src/Klavier.Core/Ports/INoteEventHandler.cs`** — Change `OnSustainChanged(bool isOn)` to `OnSustainChanged(bool isOn, InputSource source)`.
+
+**`src/Klavier.Core/Engine/PianoEngine.cs`** — Four related changes:
+
+1. **Event-shape source propagation.** Step 0 already added the `_midiInputActiveNotes` dict, the `_midiInputSustainOn` field, the `GetActiveNotes(MidiInput)` arm, the sustain switch cases, and the `IsSustainOn` aggregate. Step 1 now propagates the source through the event types themselves: `NoteOn` includes `source` in the constructed `NoteOnEvent` (which gains a `Source` property — see `NoteOnEvent.cs` above), and the existing `NotifyHandlers(handler => handler.OnSustainChanged(...))` calls pass `source` as the new second parameter (the signature was updated in `INoteEventHandler.cs` above).
+
+2. **Active-notes dict type change** (fixes the `AllNotesOff` stuck-highlight bug when `Transpose ≠ 0`). Change `Dictionary<NotePitch, int>` to `Dictionary<NotePitch, (NotePitch KeyPitch, int Count)>` for all three source dicts (including the one Step 0 just added). The dict key stays sounding pitch (so `IsNoteActive` semantics are unchanged); the value carries the original key pitch. `NoteOn` stores `(keyPitch, 1)` and increments on re-press. `NoteOff` reads the count, decrements or removes. `AllNotesOff` iterates `sourceDict` and emits `NoteOffEvent(entry.Value.KeyPitch, entry.Key)`.
+
+3. **`PanicAllNotesOff` refactor.** Replace the manual guard and clear loop (which Step 0 extended to include `_midiInputActiveNotes`) with iteration over `Enum.GetValues<InputSource>()` calling `GetActiveNotes(source)` — both for the guard and the clear loop. The same refactor pattern applies to the sustain aggregation: consider a `_sustainBySource` dict keyed by `InputSource`, with `IsSustainOn => _sustainBySource.Values.Any(v => v)` — decide at impl time. After this refactor, future `InputSource` additions need no changes here.
+
+4. **Concurrency lock** (fixes the pre-existing race between PC keyboard, file playback, and now MIDI input threads). Add a private `Lock _lock = new();` field and wrap all mutating public methods (`NoteOn`, `NoteOff`, `AllNotesOff`, `SustainOn`, `SustainOff`, `ToggleSustain`, `Panic`) and `OnPianoConfigChanged` in `lock (_lock) { ... }`. `RegisterHandler` is called only at startup before any events flow and does not need the lock. Reads of single fields by handlers (post-notify) do not need it either.
+
+**`src/Klavier.UI/ViewModels/PianoViewModel.cs`** — Update `OnSustainChanged` to accept the new `InputSource source` parameter; ignore it (highlight semantics do not depend on source).
+
+**`src/Klavier.Audio/FluidSynthAudioOutput.cs`** — Same signature update; ignore the parameter for now. Step 3 adds the filtering logic.
+
+**`src/Klavier.Midi/Playback/MidiPlaybackCoordinator.cs`** — No change required. It already passes `InputSource.Playback` to `_engine.SustainOn/Off`, and its subscription to `_player.SustainChanged` is at the player API surface where there is no source concept.
+
+**Why `NoteOffEvent` does not gain a `Source`.** The engine fires an aggregate `OnNoteOff` only when *every* source has released the note, so attributing it to a single source would be misleading. The audio side does not need to filter `NoteOff` either — when audio was muted on the corresponding `NoteOn`, FluidSynth never started the note, so the matching `NoteOff` is a no-op.
+
+### Step 2 — Config: `MidiInputConfig`
+
+Pure config plumbing. Build stays green, still no behavior change.
+
+**`src/Klavier.Config/Schema/MidiInputConfig.cs`** (new) — Mirror `PlayerConfig`'s shape:
+
+```csharp
+public class MidiInputConfig
+{
+    public const string SectionName = "MidiInput";
+
+    public string SelectedDevice { get; init; } = "";
+    public bool AudioEnabled { get; init; } = true;
+
+    public static class Keys
+    {
+        public static readonly string SelectedDevice = ConfigKey.Of(SectionName, nameof(MidiInputConfig.SelectedDevice));
+        public static readonly string AudioEnabled = ConfigKey.Of(SectionName, nameof(MidiInputConfig.AudioEnabled));
+    }
+}
+```
+
+**`src/Klavier/appsettings.json`** — Add a new top-level section: `"MidiInput": { "SelectedDevice": "", "AudioEnabled": true }`.
+
+**`src/Klavier.Midi/ServiceCollectionExtensions.cs`** — In `AddMidi`, bind the config: `services.Configure<MidiInputConfig>(configuration.GetSection(MidiInputConfig.SectionName));`.
+
+### Step 3 — Audio: filter `InputSource.MidiInput` Note On in FluidSynth when muted
+
+**`src/Klavier.Audio/FluidSynthAudioOutput.cs`** — Inject `IOptionsMonitor<MidiInputConfig> midiInputConfig` via the constructor.
+
+In `OnNoteOn(NoteOnEvent ev)`, early-return when the event comes from a muted MIDI input source:
+
+```csharp
+if (ev.Source == InputSource.MidiInput && !midiInputConfig.CurrentValue.AudioEnabled)
+{
+    return;
+}
+```
+
+`OnNoteOff` does not filter (see Step 1's "Why `NoteOffEvent` does not gain a `Source`"). `OnSustainChanged` does not filter at the audio side either — sustain mute is enforced *upstream* at the coordinator (see Step 5), so FluidSynth simply never sees a muted MidiInput sustain event. The `source` parameter on `OnSustainChanged` exists for engine fan-out symmetry, not for audio filtering.
+
+Build still green. The mute toggle takes effect silently once Steps 4-6 wire a real device.
+
+### Step 4 — Domain port + DryWetMidi adapter
+
+This step **replaces** Step 0's `MidiInputPoc.cs`: same DryWetMidi event-handling code, now split into a port + adapter and extended with the CC120/CC123 handling that the POC didn't cover. **Two POC artifacts are deleted in this step** — see the manifest in Step 0:
+
+- Delete `src/Klavier.Midi/Input/MidiInputPoc.cs` entirely.
+- Remove `services.AddSingleton<MidiInputPoc>();` from `src/Klavier.Midi/ServiceCollectionExtensions.cs` (replaced by `AddSingleton<IMidiInputDevice, DryWetMidiInputDevice>();` below).
+
+The host-extension method and its call site in `Program.cs` are left in place for now — they reference `MidiInputPoc`, so the build won't actually be green at the end of Step 4 alone. Step 6 deletes them. (Acceptable to keep the build red between Step 4 and Step 6 since the coordinator wiring is split across the two; alternatively, comment out the call temporarily in Step 4 and uncomment-then-replace in Step 6 if a green build per-step is preferred.)
+
+**`src/Klavier.Midi/Input/IMidiInputDevice.cs`** (new) — UI-free port for a single MIDI input device:
+
+```csharp
+public interface IMidiInputDevice
+{
+    bool IsOpen { get; }
+    string? OpenDeviceName { get; }
+
+    bool TryOpen(string deviceName);
+    void Close();
+
+    event Action<NotePitch, NoteVelocity>? NoteOnReceived;
+    event Action<NotePitch>? NoteOffReceived;
+    event Action<bool>? SustainReceived;
+    event Action? AllNotesOffReceived;  // fired for CC120 or CC123
+}
+```
+
+**`src/Klavier.Midi/Input/DryWetMidiInputDevice.cs`** (new) — Implementation wrapping `Melanchall.DryWetMidi.Multimedia.InputDevice`.
+
+- `TryOpen(deviceName)` enumerates `InputDevice.GetAll()`, finds a matching device, instantiates via `InputDevice.GetByName(...)`, subscribes to `EventReceived`, and calls `StartEventsListening()`. Returns `false` on any exception (device locked by another app, driver error).
+- `Close` calls `StopEventsListening`, unsubscribes, and disposes the underlying `InputDevice`.
+- The `EventReceived` handler pattern-matches on `Melanchall.DryWetMidi.Core.NoteOnEvent` / `NoteOffEvent` / `ControlChangeEvent`, translates note numbers and velocities to `Klavier.Core.Primitives.NotePitch` / `NoteVelocity`, and raises the appropriate forwarding event.
+- Control-change routing: `ControlNumber == 64` → `SustainReceived(value >= 64)`; `ControlNumber == 120` or `ControlNumber == 123` → `AllNotesOffReceived()`; all other CC numbers are ignored.
+- Velocity-0 Note On is forwarded as `NoteOnReceived` unchanged — `PianoEngine.NoteOn` already converts velocity-0 to a NoteOff internally.
+
+**Note on the Multimedia package.** DryWetMidi exposes the `Multimedia` namespace from the same `Melanchall.DryWetMidi` NuGet on Windows (uses WinMM, no extra dependency). Linux and macOS would need additional native libraries — out of scope for v1.
+
+No DI wiring yet, so still not user-visible.
+
+### Step 5 — Coordinator (`MidiInputCoordinator`)
+
+**`src/Klavier.Midi/Input/IMidiInputCoordinator.cs`** (new) — UI-facing port:
+
+```csharp
+public interface IMidiInputCoordinator
+{
+    IReadOnlyList<string> GetAvailableDevices();
+    string? CurrentOpenDevice { get; }
+
+    event Action? DevicesChanged;
+    event Action<string?>? CurrentOpenDeviceChanged;
+    event Action<string>? DeviceDisconnected;
+    event Action<string, string>? DeviceOpenFailed;  // (deviceName, reason)
+}
+```
+
+**`src/Klavier.Midi/Input/MidiInputCoordinator.cs`** (new) — Singleton, also implements `IHostedService` (see Step 6). Constructor: `(IMidiInputDevice device, IPianoEngine engine, IOptionsMonitor<MidiInputConfig> config, ILogger<MidiInputCoordinator>)`.
+
+The coordinator owns three pieces of state and one background timer:
+
+- A `Timer` polling `Melanchall.DryWetMidi.Multimedia.InputDevice.GetAll()` every ~2 s, comparing to the previous list and raising `DevicesChanged` on any diff.
+- A cached `IReadOnlyList<string>` of the last-known available devices.
+- A subscription to `config.OnChange`, reacting to `SelectedDevice` and `AudioEnabled` updates from the UI.
+
+The initial device scan and the auto-open of `config.CurrentValue.SelectedDevice` happen in `StartAsync` (see Step 6 for why).
+
+**Event forwarding into `IPianoEngine`.**
+
+- `NoteOnReceived` → `_engine.NoteOn(pitch, velocity, InputSource.MidiInput)` — **unconditionally**. Mute does not drop notes; FluidSynth filters them downstream (Step 3).
+- `NoteOffReceived` → `_engine.NoteOff(pitch, InputSource.MidiInput)` — **unconditionally**.
+- `SustainReceived(isOn)` → `_engine.SustainOn/Off(InputSource.MidiInput)` — **only when `config.CurrentValue.AudioEnabled` is true**. When muted, the sustain event is dropped at the coordinator so the engine's aggregate sustain never includes it.
+- `AllNotesOffReceived` → `_engine.AllNotesOff(InputSource.MidiInput) + _engine.SustainOff(InputSource.MidiInput)` — **unconditionally**. Mute does not suppress drains (same as our local drain triggers).
+
+**Config-OnChange dedup.** `IOptionsMonitor.OnChange` fires on *any* field change in `MidiInputConfig`. The coordinator caches `_lastSelectedDevice` and `_lastAudioEnabled` separately and handles each independently:
+
+- If `SelectedDevice` changed → close the current device and open the new one (with drain on close, per the rules below).
+- If `AudioEnabled` changed → drain sustain on `true → false` only.
+- Both can change in the same notification — handle both arms.
+
+Pattern reference: `FluidSynthAudioOutput.OnAudioConfigChanged` does field-by-field comparison the same way (compares `VolumeInPercent`, `SoundFont.Path`, and preset bank/program independently).
+
+**Held-state drain at transitions** (see the design row of the same name).
+
+- On disconnect AND on the user selecting "(none)" → `_engine.AllNotesOff(InputSource.MidiInput)` + `_engine.SustainOff(InputSource.MidiInput)` before closing the adapter.
+- On `AudioEnabled` `true → false` → `_engine.SustainOff(InputSource.MidiInput)` only (notes keep flowing through the engine).
+
+**Disconnect handling.** If the open device disappears between polls, the coordinator drains held state (as above), closes the adapter, clears `CurrentOpenDevice`, emits `CurrentOpenDeviceChanged(null)`, and raises `DeviceDisconnected(deviceName)`.
+
+**Open-failure handling.** When `TryOpen` returns false, the coordinator logs the failure, leaves `CurrentOpenDevice` null, and raises `DeviceOpenFailed(deviceName, reason)`. **No auto-retry** — the user must reselect to try again.
+
+**Persistence.** `MidiInputConfig:SelectedDevice` is *not* cleared on either disconnect or open-failure. It stays in `usersettings.json` so a same-named device returning later still appears in the dropdown — but the coordinator does **not** auto-reopen on replug.
+
+**Threading.** Both the polling timer and DryWetMidi's `EventReceived` callback invoke the coordinator from non-UI threads. The coordinator uses an internal `Lock` for state transitions (open / close, device list mutation). Forwarding into `IPianoEngine` happens from the DryWetMidi callback thread — the engine's new `Lock` (Step 1) and the handlers' UI-thread marshalling (PianoViewModel) tolerate this.
+
+### Step 6 — DI registration via `IHostedService`
+
+The coordinator must run its initial scan and auto-open the persisted device at app startup, *before* the user can interact with the UI. Implementing `IHostedService` on the coordinator is the Microsoft-blessed pattern for startup-bound singletons and keeps us out of ad-hoc eager-resolve calls in `Program.cs`.
+
+**`Directory.Packages.props`** — Add a centralized version pin for `Microsoft.Extensions.Hosting.Abstractions` if not already present. (`Microsoft.Extensions.Hosting`, which `Klavier` already references, brings the abstractions transitively — but `Klavier.Midi` should reference `.Abstractions` directly rather than pulling in the full `Hosting` package.)
+
+**`src/Klavier.Midi/Klavier.Midi.csproj`** — Add `<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />`.
+
+**`src/Klavier.Midi/Input/MidiInputCoordinator.cs`** — Implement `IHostedService` alongside `IMidiInputCoordinator`.
+
+- `StartAsync(CancellationToken)` — start the polling timer, do the initial `InputDevice.GetAll()` scan, and call `TryOpen` for `config.CurrentValue.SelectedDevice` if non-empty. Log a startup banner: `"MidiInputCoordinator started, {DeviceCount} device(s) available"`.
+- `StopAsync(CancellationToken)` — dispose the timer, close the open device.
+
+**`src/Klavier.Midi/ServiceCollectionExtensions.cs`** — Register `IMidiInputDevice` plus a single-instance dual registration for the coordinator (so the same object is both auto-started as an `IHostedService` and resolvable as `IMidiInputCoordinator` from the UI):
+
+```csharp
+services.AddSingleton<IMidiInputDevice, DryWetMidiInputDevice>();
+
+services.AddSingleton<MidiInputCoordinator>();
+services.AddSingleton<IMidiInputCoordinator>(sp => sp.GetRequiredService<MidiInputCoordinator>());
+services.AddHostedService(sp => sp.GetRequiredService<MidiInputCoordinator>());
+```
+
+**`src/Klavier/Extensions/HostExtensions.cs`** — **Remove the `InitializeMidiInputPoc` extension method** added in Step 0. The coordinator is now started by the host's `IHostedService` pipeline; no eager-resolve helper needed.
+
+**`src/Klavier/Program.cs`** — Two changes:
+
+1. **Remove the `.InitializeMidiInputPoc()` call** added in Step 0 to the init chain. (After this removal, no code anywhere references `MidiInputPoc` — confirmed by the verification below.)
+2. The `IHost` is currently never `.RunAsync`'d — `RunAvaloniaApp` calls `StartWithClassicDesktopLifetime` directly, which means `IHostedService.StartAsync` would never fire without this change. Three sub-modifications:
+    1. Wrap `host` in a `using` declaration.
+    2. Call `host.StartAsync().GetAwaiter().GetResult()` after the existing `EnsureValidUserSettings()…ApplyColorTheme()` chain, before `RunAvaloniaApp(args)`.
+    3. Call `host.StopAsync().GetAwaiter().GetResult()` in a `finally` block after the Avalonia loop returns.
+
+This makes `IHostedService` work, and incidentally disposes DI singletons on app exit (partial fix for the "no-disposal-on-exit" pre-existing issue — see the matching design row). The other existing eager-resolve init methods (`InitializeMidiPlaybackCoordinator`, etc.) continue to work — they run before `StartAsync` and remain the precedent for non-`IHostedService` coordinators.
+
+After this step, plugging in a device and manually editing `usersettings.json` to set `MidiInput:SelectedDevice` would route notes into the engine on next launch. There is still no UI for the user to do this themselves.
+
+**POC removal verification (run at end of Step 6, before moving to Step 7).** Confirm every artifact in Step 0's POC removal manifest is gone:
+
+1. `git grep -n MidiInputPoc` returns **zero hits** anywhere in the repo (no file, no using, no DI registration, no host-extension method, no Program.cs call site).
+2. `Get-ChildItem src/Klavier.Midi/Input/MidiInputPoc.cs` reports "file does not exist".
+3. `git grep -n InitializeMidiInputPoc` returns **zero hits**.
+4. The build is green: `dotnet build` succeeds with no errors (compiler would catch any dangling reference to `MidiInputPoc`).
+5. At runtime: launch the app with a MIDI device connected. The startup banner is now `"MidiInputCoordinator started, {N} device(s) available"` (from the hosted service in Step 6), NOT `"POC opened MIDI input device {Name}"` (the Step 0 banner). The POC log line should never appear again.
+
+If any of the above fails, stop and clean up before proceeding to Step 7. The "kept" Core extensions from Step 0 (third dict, sustain field, switch arms in `PianoEngine`, `MidiInput` enum value) are intentional and should remain — only POC-specific artifacts are checked.
+
+### Step 7 — Settings UI: device-selector row
+
+In `src/Klavier.UI/Views/Settings/SettingsView.cs`, add a new `BuildMidiInputDeviceRow()` method placed in the **Sound & Playback** section (after the Preset row, before the section ends). Pattern mirrors the existing keyboard-layout / soundfont rows:
+
+- Inject `IMidiInputCoordinator` and `IOptionsMonitor<MidiInputConfig>` via the constructor.
+- Build a `StyledComboBox` whose items are `["(none)", .. coordinator.GetAvailableDevices()]`. Selected item resolves from `MidiInputConfig.CurrentValue.SelectedDevice` — empty string maps to "(none)".
+- A small `Ellipse` status dot (8 px) sits next to the combobox: `ThemePaletteProvider.Accent` brush when `coordinator.CurrentOpenDevice is not null`, neutral / muted color otherwise.
+- Wire `SelectionChanged` to `_settingsService.UpdateSetting(MidiInputConfig.Keys.SelectedDevice, selectedNameOrEmpty)`. The coordinator's `config.OnChange` subscription does the actual open/close.
+- Subscribe to `coordinator.DevicesChanged` via `UIThread.Post(...)` to refresh the combobox items, preserving the current selection.
+- Subscribe to `coordinator.CurrentOpenDeviceChanged` via `UIThread.Post(...)` to update the status dot.
+- Subscribe to `coordinator.DeviceDisconnected` and `coordinator.DeviceOpenFailed` via `UIThread.Post(...)`. Both feed into the **same inline `TextBlock`** next to the status dot in a warning-colored foreground — disconnect shows `"{deviceName} disconnected"`, open-failure shows `"Cannot open {deviceName}"`. A shared `DispatcherTimer` (single-shot, ~4 s) clears the text and returns the dot to its neutral color. No new toast infrastructure needed — the notification is local to the settings row.
+- Tooltip on the row: `"Connected MIDI keyboard or controller (USB or 5-pin MIDI port)"`.
+
+New label / tooltip constants at the top of `SettingsView.cs`:
+
+```csharp
+private const string _MidiInputDeviceLabel = "MIDI input device";
+private const string _MidiInputDeviceTooltip = "External MIDI keyboard or controller. (none) disables external input.";
+```
+
+### Step 8 — Settings UI: audio-mute toggle row
+
+Second row in the same section, immediately under the device-selector row. Pattern mirrors `BuildShowKeyLabelsRow()`:
+
+- `ToggleSwitch` initialized from `MidiInputConfig.CurrentValue.AudioEnabled`.
+- `WireToggle(toggle, MidiInputConfig.Keys.AudioEnabled)`.
+- `_midiInputConfig.OnChangeOnUIThread(c => toggle.IsChecked = c.AudioEnabled)`.
+
+Label and tooltip:
+
+```csharp
+private const string _MidiInputAudioEnabledLabel = "Play MIDI input";
+private const string _MidiInputAudioEnabledTooltip = "Off when your MIDI keyboard has its own speakers and you don't want Klavier doubling the sound. Piano view still highlights pressed keys.";
+```
+
+### Step 9 — Hosted-service startup checkpoint
+
+Behavior-level checkpoint, not a code step — Step 6 already wires the hosted service. Confirm via the running app that:
+
+1. The coordinator's `StartAsync` runs before the main window appears (log message visible in console: e.g. `"MidiInputCoordinator started, {N} device(s) available"`).
+2. If `usersettings.json` already has a `MidiInput:SelectedDevice` set to a currently-connected device, that device is auto-opened during `StartAsync` (log message: `"Opened MIDI input device {Device}"`).
+3. If the persisted device is missing, the coordinator stays in "(none)" state and the settings UI shows "(none)" selected with a neutral status dot — no error, no notification (notifications are reserved for live disconnects).
+4. App shutdown calls `StopAsync` which closes the open device cleanly (visible in log).
+
+### Step 10 — Verification
+
+1. Build: `dotnet build` succeeds with no errors / no new warnings.
+2. Launch with no MIDI device connected. Settings panel → Sound & Playback → "MIDI input device" combobox shows only "(none)"; status dot is neutral; "Play MIDI input" toggle is on (default).
+3. Plug a MIDI device in. Within ~2 s the combobox shows the device name as an option. Select it. Status dot turns accent-colored.
+4. Press a key on the device. Piano view highlights the corresponding key. FluidSynth plays the note at the device's velocity (not `Piano:Velocity`).
+5. Hold a key, release. Piano view de-highlights. FluidSynth releases.
+6. Hold the sustain pedal on the device (CC64). UI sustain bar shows sustain on; held notes ring through; release pedal → sustain off; notes decay.
+7. Set `Piano:Transpose` to +2 via the settings panel. Press the device's C key — the piano view highlights C, FluidSynth plays D. Same behavior as PC-keyboard input.
+8. Toggle "Play MIDI input" off. Press a device key — piano view still highlights, but FluidSynth stays silent. Press a PC key — FluidSynth still plays (PC-keyboard is unaffected). Spacebar sustain still works for PC keys. **Press the device's sustain pedal — the UI sustain bar does NOT light up** (coordinator drops the event upstream of the engine). Toggle back on, press the pedal — sustain bar lights up immediately.
+9. **Disconnect.** While the device is selected, unplug it. Within ~2 s the status dot returns to neutral; the combobox selection becomes "(none)"; a brief `"{deviceName} disconnected"` notification appears next to the dot in a warning color and clears after ~4 s; `usersettings.json` still has the previous name persisted.
+10. **Open failure.** With the device connected, lock it in another MIDI app (e.g. open the device in a DAW with exclusive access), then in Klavier's settings panel select the device from the dropdown. The status dot stays neutral; a brief `"Cannot open {deviceName}"` notification appears in the same inline slot and clears after ~4 s. `CurrentOpenDevice` remains null; pressing keys on the device does nothing in Klavier. Releasing the lock in the other app + reselecting in Klavier succeeds.
+11. **Held-state drain on disconnect.** Press AND hold several keys + the sustain pedal on the device. Without releasing, unplug the device. The piano view de-highlights all keys; the UI sustain bar turns off; FluidSynth releases the notes. No hung audio.
+12. **Held-state drain on '(none)' selection.** Press AND hold several keys + the sustain pedal. Without releasing, select '(none)' in the device dropdown. Same observable behavior as #11.
+13. **Held-state drain on mute toggle (sustain only).** Press AND hold the sustain pedal on the device. While holding, toggle "Play MIDI input" off. The UI sustain bar turns off immediately. Release the pedal physically (no observable effect). Press a key on the device — it lights up but FluidSynth stays silent. Toggle "Play MIDI input" back on, repress the pedal — sustain re-engages. Verify that toggling mute does NOT close + reopen the device (status dot stays accent-colored throughout).
+14. **CC123 / CC120 drain.** If your device has an explicit "Panic" or "All Notes Off" button (many controllers do), press AND hold several keys + the sustain pedal, then press that button. All highlights clear, sustain bar turns off, FluidSynth releases. Same observable behavior as #11. (If the device sends CC123 automatically on power-up, this can also be observed by toggling the device on while Klavier has notes held from PC keyboard — only the MidiInput-sourced state drains, the PC-sourced state stays.)
+15. **Replug.** Re-plug the same device. The combobox repopulates the option but selection stays "(none)" (no auto-reopen on hot-plug — only at startup). Select it manually → reopens.
+16. **Restart with persisted device.** Restart the app with the device connected. Console logs show the coordinator auto-opening it. Pressing a key works without selecting it in the UI.
+17. **Panic.** Click **Panic** while holding a device key. All notes cut; piano view clears; sustain clears. Playing on the device immediately afterward still works.
+18. **Layered playback + input.** Load a MIDI file (Iteration 14) and click Play while playing along on the device. Both sources highlight the piano simultaneously; both make audio (assuming both audio toggles are on). Mute "Play MIDI input" — file audio continues, device-only events stay visual.
+19. **Regression.** PC-keyboard input, all existing settings, file playback, panic, toolbar, settings panel, soundfont picker, theme switching, keybinds editor — all unaffected.
+
+### Key files to create
+
+- `src/Klavier.Config/Schema/MidiInputConfig.cs`
+- `src/Klavier.Midi/Input/IMidiInputDevice.cs`
+- `src/Klavier.Midi/Input/DryWetMidiInputDevice.cs`
+- `src/Klavier.Midi/Input/IMidiInputCoordinator.cs`
+- `src/Klavier.Midi/Input/MidiInputCoordinator.cs`
+
+### Key files to modify
+
+- `src/Klavier.Core/Primitives/InputSource.cs` — add `MidiInput`
+- `src/Klavier.Core/Events/NoteOnEvent.cs` — add `Source` property
+- `src/Klavier.Core/Ports/INoteEventHandler.cs` — `OnSustainChanged` gains `InputSource source`
+- `src/Klavier.Core/Engine/PianoEngine.cs` — source propagation on events, active-notes dict type change (`(KeyPitch, Count)` value), `PanicAllNotesOff` refactor over `Enum.GetValues<InputSource>()`, and a `Lock` around mutating methods. Full details in Step 1.
+- `src/Klavier.UI/ViewModels/PianoViewModel.cs` — update `OnSustainChanged` signature
+- `src/Klavier.Audio/FluidSynthAudioOutput.cs` — inject `IOptionsMonitor<MidiInputConfig>`, filter `MidiInput` events when muted
+- `src/Klavier.Midi/ServiceCollectionExtensions.cs` — register `MidiInputConfig` + new services + hosted-service dual registration
+- `src/Klavier.Midi/Klavier.Midi.csproj` — add `Microsoft.Extensions.Hosting.Abstractions` package reference
+- `Directory.Packages.props` — add centralized version for `Microsoft.Extensions.Hosting.Abstractions` if not already present
 - `src/Klavier/appsettings.json` — add `MidiInput` section
-- `src/Klavier.UI/Views/Settings/SettingsPanel.cs` + `SettingsPanel.Helpers.cs` — device-selector row + audio-mute toggle row + connection indicator
+- `src/Klavier/Program.cs` — wrap host in `using`, call `host.StartAsync()` after the init pipeline, `host.StopAsync()` after the Avalonia loop returns (required for `IHostedService.StartAsync` to fire)
+- `src/Klavier.UI/Views/Settings/SettingsView.cs` — device-selector row + audio-mute toggle row + disconnect notification in Sound & Playback section
+- `src/Klavier.UI/Views/Settings/SettingsView.Helpers.cs` — optionally a small helper for the status-dot `Ellipse`
+- `src/Klavier.Midi/Playback/MidiPlaybackCoordinator.cs` — no change expected (it consumes `MidiPlayer` events, not `INoteEventHandler`)
+
+### Deferred opportunities (intentionally out of scope, parked for later)
+
+- **Test sound button next to the device selector.** Fires a brief C4 as if from the device. Diagnostic value once `MidiInput` source is in the engine. Deferred because the status dot + "press a key" already confirms wiring, and a synthetic event would pollute a future recorder (Iter 16).
+- **Auto-select first device on first run.** When there's exactly one device and `SelectedDevice` is empty, auto-select. Deferred because cleanly distinguishing "never set" from "user explicitly chose (none)" requires a sentinel value or a "has-been-set" flag — scope creep for the value delivered.
+- **Device-count hint in dropdown placeholder** (`(none) - 2 device(s) available`). Low value (one click reveals the list anyway) for low cost. Skip in v1.
 
 ---
 
