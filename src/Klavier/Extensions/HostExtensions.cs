@@ -2,6 +2,7 @@ using Avalonia;
 using Klavier.Config.Schema;
 using Klavier.Core.Engine;
 using Klavier.Core.Ports;
+using Klavier.Midi.Input;
 using Klavier.Midi.Loading;
 using Klavier.Midi.Playback;
 using Klavier.Services;
@@ -49,6 +50,13 @@ public static class HostExtensions
     {
         // Resolve the coordinator to trigger its constructor, which subscribes to player + engine events.
         host.Services.GetRequiredService<MidiPlaybackCoordinator>();
+        return host;
+    }
+
+    // POC for iteration 15 / Step 0. Whole method removed in Step 6 (coordinator runs as IHostedService).
+    public static IHost InitializeMidiInputPoc(this IHost host)
+    {
+        host.Services.GetRequiredService<MidiInputPoc>();
         return host;
     }
 

@@ -14,10 +14,12 @@ public class PianoEngine : IPianoEngine
     private PianoConfig _lastPianoConfig;
     private readonly Dictionary<NotePitch, int> _userActiveNotes = [];
     private readonly Dictionary<NotePitch, int> _playerActiveNotes = [];
+    private readonly Dictionary<NotePitch, int> _midiDeviceActiveNotes = [];
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
     private bool _userSustainOn;
     private bool _playerSustainOn;
-    private bool IsSustainOn => _userSustainOn || _playerSustainOn;
+    private bool _midiDeviceSustainOn;
+    private bool IsSustainOn => _userSustainOn || _playerSustainOn || _midiDeviceSustainOn;
 
     public event Action? PanicRaised;
 
@@ -121,6 +123,9 @@ public class PianoEngine : IPianoEngine
             case InputSource.Playback:
                 _playerSustainOn = true;
                 break;
+            case InputSource.MidiDevice:
+                _midiDeviceSustainOn = true;
+                break;
         }
         if (!wasOn && IsSustainOn)
         {
@@ -139,6 +144,9 @@ public class PianoEngine : IPianoEngine
                 break;
             case InputSource.Playback:
                 _playerSustainOn = false;
+                break;
+            case InputSource.MidiDevice:
+                _midiDeviceSustainOn = false;
                 break;
         }
         if (wasOn && !IsSustainOn)
@@ -170,13 +178,14 @@ public class PianoEngine : IPianoEngine
     {
         SustainOff(InputSource.User);
         SustainOff(InputSource.Playback);
+        SustainOff(InputSource.MidiDevice);
         PanicAllNotesOff();
         PanicRaised?.Invoke();
     }
 
     private void PanicAllNotesOff()
     {
-        if (_userActiveNotes.Count == 0 && _playerActiveNotes.Count == 0)
+        if (_userActiveNotes.Count == 0 && _playerActiveNotes.Count == 0 && _midiDeviceActiveNotes.Count == 0)
         {
             return;
         }
@@ -184,6 +193,7 @@ public class PianoEngine : IPianoEngine
         _logger.LogInformation("All notes off (panic)");
         _userActiveNotes.Clear();
         _playerActiveNotes.Clear();
+        _midiDeviceActiveNotes.Clear();
 
         for (ushort pitch = NotePitch.MinValue; pitch <= NotePitch.MaxValue; pitch++)
         {
@@ -213,6 +223,7 @@ public class PianoEngine : IPianoEngine
     {
         InputSource.User => _userActiveNotes,
         InputSource.Playback => _playerActiveNotes,
+        InputSource.MidiDevice => _midiDeviceActiveNotes,
         _ => throw new ArgumentOutOfRangeException(nameof(source), source, "Unknown input source"),
     };
 

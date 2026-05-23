@@ -4,4 +4,5 @@ public enum InputSource
 {
     User,
     Playback,
+    MidiDevice,
 }

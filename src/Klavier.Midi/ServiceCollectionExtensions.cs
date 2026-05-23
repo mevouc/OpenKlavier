@@ -1,4 +1,5 @@
 using Klavier.Config.Schema;
+using Klavier.Midi.Input;
 using Klavier.Midi.Loading;
 using Klavier.Midi.Parsing;
 using Klavier.Midi.Playback;
@@ -17,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMidiPlayer, MidiPlayer>();
         services.AddSingleton<IMidiFileLoader, MidiFileLoader>();
         services.AddSingleton<MidiPlaybackCoordinator>();
+        services.AddSingleton<MidiInputPoc>(); // POC, removed in Step 4.
 
         return services;
     }

@@ -20,6 +20,7 @@ public static class Program
         host.EnsureValidUserSettings()
             .InitializePianoPipeline()
             .InitializeMidiPlaybackCoordinator()
+            .InitializeMidiInputPoc() // POC, removed in Step 6.
             .AutoLoadMidi()
             .ApplyColorTheme();
 
