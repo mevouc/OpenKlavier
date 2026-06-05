@@ -48,6 +48,7 @@ public partial class PlayerViewModel : ObservableObject
             Position = TimeSpan.Zero;
             Duration = score.TotalDuration;
             CurrentScore = score;
+            IsPlaying = false;
         });
         player.Started += UIThread.Post(() => IsPlaying = true);
         player.Paused += UIThread.Post(() => IsPlaying = false);

@@ -112,14 +112,20 @@ public class PianoEngine : IPianoEngine
                 return;
             }
 
-            List<NotePitch> affectedPitches = [.. sourceDict.Keys];
+            List<NotePitch> soundingPitches = [.. sourceDict.Keys];
             sourceDict.Clear();
 
             _logger.LogInformation("All notes off (source {Source})", source);
 
-            foreach (NotePitch pitch in affectedPitches.Where(pitch => !IsNoteActive(pitch)))
+            // The dict is keyed by sounding pitch, but handlers de-highlight by the original key pitch.
+            // Recover it by inverting the current transpose: every held note was started under the current
+            // transpose, since any transpose change clears all active notes first (OnPianoConfigChanged).
+            Transpose inverseTranspose = new((short)(-_playbackConfig.CurrentValue.Transpose));
+
+            foreach (NotePitch soundingPitch in soundingPitches.Where(pitch => !IsNoteActive(pitch)))
             {
-                NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(pitch, pitch)));
+                NotePitch keyPitch = soundingPitch.Transpose(inverseTranspose);
+                NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(keyPitch, soundingPitch)));
             }
         }
     }
@@ -182,12 +188,6 @@ public class PianoEngine : IPianoEngine
 
     private void PanicAllNotesOff()
     {
-        bool anyActive = _allSources.Any(source => _activeNotesBySource[source].Count > 0);
-        if (!anyActive)
-        {
-            return;
-        }
-
         foreach (InputSource source in _allSources)
         {
             _activeNotesBySource[source].Clear();
