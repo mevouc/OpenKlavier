@@ -9,17 +9,16 @@ namespace Klavier.Core.Engine;
 
 public class PianoEngine : IPianoEngine
 {
+    private static readonly InputSource[] _allSources = Enum.GetValues<InputSource>();
+
     private readonly IOptionsMonitor<PianoConfig> _playbackConfig;
     private readonly ILogger<PianoEngine> _logger;
+    private readonly Lock _lock = new();
     private PianoConfig _lastPianoConfig;
-    private readonly Dictionary<NotePitch, int> _userActiveNotes = [];
-    private readonly Dictionary<NotePitch, int> _playerActiveNotes = [];
-    private readonly Dictionary<NotePitch, int> _midiDeviceActiveNotes = [];
+    private readonly Dictionary<InputSource, Dictionary<NotePitch, int>> _activeNotesBySource;
+    private readonly Dictionary<InputSource, bool> _sustainBySource;
     private readonly HashSet<INoteEventHandler> _noteEventHandlers = [];
-    private bool _userSustainOn;
-    private bool _playerSustainOn;
-    private bool _midiDeviceSustainOn;
-    private bool IsSustainOn => _userSustainOn || _playerSustainOn || _midiDeviceSustainOn;
+    private bool IsSustainOn => _sustainBySource.Values.Any(on => on);
 
     public event Action? PanicRaised;
 
@@ -30,12 +29,16 @@ public class PianoEngine : IPianoEngine
         _playbackConfig = playbackConfig;
         _logger = logger;
 
+        _activeNotesBySource = _allSources.ToDictionary(source => source, _ => new Dictionary<NotePitch, int>());
+        _sustainBySource = _allSources.ToDictionary(source => source, _ => false);
+
         _lastPianoConfig = _playbackConfig.CurrentValue;
         playbackConfig.OnChange(OnPianoConfigChanged);
     }
 
     public void RegisterHandler(INoteEventHandler noteEventHandler)
     {
+        // Called only at startup before any events flow, so it does not need the lock.
         _noteEventHandlers.Add(noteEventHandler);
     }
 
@@ -44,156 +47,153 @@ public class PianoEngine : IPianoEngine
         NoteVelocity? velocity = null,
         InputSource source = InputSource.User)
     {
-        NoteVelocity effectiveVelocity = velocity ?? new NoteVelocity(_playbackConfig.CurrentValue.Velocity);
-
-        if (effectiveVelocity.Value == 0) // MIDI spec: velocity 0 = note-off
+        lock (_lock)
         {
-            NoteOff(keyPitch, source);
-            return;
-        }
+            NoteVelocity effectiveVelocity = velocity ?? new NoteVelocity(_playbackConfig.CurrentValue.Velocity);
 
-        NotePitch soundingPitch = keyPitch.Transpose(new Transpose(_playbackConfig.CurrentValue.Transpose));
-        bool wasActive = IsNoteActive(soundingPitch);
-        Dictionary<NotePitch, int> sourceActiveNotes = GetActiveNotes(source);
+            if (effectiveVelocity.Value == 0) // MIDI spec: velocity 0 = note-off
+            {
+                NoteOff(keyPitch, source);
+                return;
+            }
 
-        if (!sourceActiveNotes.TryAdd(soundingPitch, 1))
-        {
-            sourceActiveNotes[soundingPitch]++;
-        }
+            NotePitch soundingPitch = keyPitch.Transpose(new Transpose(_playbackConfig.CurrentValue.Transpose));
+            bool wasActive = IsNoteActive(soundingPitch);
+            Dictionary<NotePitch, int> sourceActiveNotes = GetActiveNotes(source);
 
-        if (!wasActive)
-        {
-            NoteOnEvent noteOnEvent = new(keyPitch, soundingPitch, effectiveVelocity);
-            _logger.LogInformation("Playing note {SoundingPitch} (source {Source})", soundingPitch, source);
-            NotifyHandlers(handler => handler.OnNoteOn(noteOnEvent));
+            if (!sourceActiveNotes.TryAdd(soundingPitch, 1))
+            {
+                sourceActiveNotes[soundingPitch]++;
+            }
+
+            if (!wasActive)
+            {
+                NoteOnEvent noteOnEvent = new(keyPitch, soundingPitch, effectiveVelocity, source);
+                _logger.LogInformation("Playing note {SoundingPitch} (source {Source})", soundingPitch, source);
+                NotifyHandlers(handler => handler.OnNoteOn(noteOnEvent));
+            }
         }
     }
 
     public void NoteOff(NotePitch keyPitch, InputSource source = InputSource.User)
     {
-        NotePitch soundingPitch = keyPitch.Transpose(new Transpose(_playbackConfig.CurrentValue.Transpose));
-        Dictionary<NotePitch, int> sourceActiveNotes = GetActiveNotes(source);
-
-        if (sourceActiveNotes.TryGetValue(soundingPitch, out int activeCount))
+        lock (_lock)
         {
-            if (activeCount == 1)
-            {
-                sourceActiveNotes.Remove(soundingPitch);
+            NotePitch soundingPitch = keyPitch.Transpose(new Transpose(_playbackConfig.CurrentValue.Transpose));
+            Dictionary<NotePitch, int> sourceActiveNotes = GetActiveNotes(source);
 
-                if (!IsNoteActive(soundingPitch))
-                {
-                    _logger.LogInformation("Releasing note {SoundingPitch}", soundingPitch);
-                    NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(keyPitch, soundingPitch)));
-                }
-            }
-            else
+            if (sourceActiveNotes.TryGetValue(soundingPitch, out int activeCount))
             {
-                sourceActiveNotes[soundingPitch] = activeCount - 1;
+                if (activeCount == 1)
+                {
+                    sourceActiveNotes.Remove(soundingPitch);
+
+                    if (!IsNoteActive(soundingPitch))
+                    {
+                        _logger.LogInformation("Releasing note {SoundingPitch}", soundingPitch);
+                        NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(keyPitch, soundingPitch)));
+                    }
+                }
+                else
+                {
+                    sourceActiveNotes[soundingPitch] = activeCount - 1;
+                }
             }
         }
     }
 
     public void AllNotesOff(InputSource source)
     {
-        Dictionary<NotePitch, int> sourceDict = GetActiveNotes(source);
-        if (sourceDict.Count == 0)
+        lock (_lock)
         {
-            return;
-        }
+            Dictionary<NotePitch, int> sourceDict = GetActiveNotes(source);
+            if (sourceDict.Count == 0)
+            {
+                return;
+            }
 
-        List<NotePitch> affectedPitches = [.. sourceDict.Keys];
-        sourceDict.Clear();
+            List<NotePitch> affectedPitches = [.. sourceDict.Keys];
+            sourceDict.Clear();
 
-        _logger.LogInformation("All notes off (source {Source})", source);
+            _logger.LogInformation("All notes off (source {Source})", source);
 
-        foreach (NotePitch pitch in affectedPitches.Where(pitch => !IsNoteActive(pitch)))
-        {
-            NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(pitch, pitch)));
+            foreach (NotePitch pitch in affectedPitches.Where(pitch => !IsNoteActive(pitch)))
+            {
+                NotifyHandlers(handler => handler.OnNoteOff(new NoteOffEvent(pitch, pitch)));
+            }
         }
     }
 
     public void SustainOn(InputSource source = InputSource.User)
     {
-        bool wasOn = IsSustainOn;
-        switch (source)
+        lock (_lock)
         {
-            case InputSource.User:
-                _userSustainOn = true;
-                break;
-            case InputSource.Playback:
-                _playerSustainOn = true;
-                break;
-            case InputSource.MidiDevice:
-                _midiDeviceSustainOn = true;
-                break;
-        }
-        if (!wasOn && IsSustainOn)
-        {
-            _logger.LogInformation("Sustain on (triggered by {Source})", source);
-            NotifyHandlers(handler => handler.OnSustainChanged(true));
+            bool wasOn = IsSustainOn;
+            _sustainBySource[source] = true;
+            if (!wasOn && IsSustainOn)
+            {
+                _logger.LogInformation("Sustain on (triggered by {Source})", source);
+                NotifyHandlers(handler => handler.OnSustainChanged(true));
+            }
         }
     }
 
     public void SustainOff(InputSource source = InputSource.User)
     {
-        bool wasOn = IsSustainOn;
-        switch (source)
+        lock (_lock)
         {
-            case InputSource.User:
-                _userSustainOn = false;
-                break;
-            case InputSource.Playback:
-                _playerSustainOn = false;
-                break;
-            case InputSource.MidiDevice:
-                _midiDeviceSustainOn = false;
-                break;
-        }
-        if (wasOn && !IsSustainOn)
-        {
-            _logger.LogInformation("Sustain off (triggered by {Source})", source);
-            NotifyHandlers(handler => handler.OnSustainChanged(false));
+            bool wasOn = IsSustainOn;
+            _sustainBySource[source] = false;
+            if (wasOn && !IsSustainOn)
+            {
+                _logger.LogInformation("Sustain off (triggered by {Source})", source);
+                NotifyHandlers(handler => handler.OnSustainChanged(false));
+            }
         }
     }
 
     public void ToggleSustain(InputSource source = InputSource.User)
     {
-        bool isSourceOn = source switch
+        lock (_lock)
         {
-            InputSource.User => _userSustainOn,
-            InputSource.Playback => _playerSustainOn,
-            _ => false,
-        };
-        if (isSourceOn)
-        {
-            SustainOff(source);
-        }
-        else
-        {
-            SustainOn(source);
+            if (_sustainBySource[source])
+            {
+                SustainOff(source);
+            }
+            else
+            {
+                SustainOn(source);
+            }
         }
     }
 
     public void Panic()
     {
-        SustainOff(InputSource.User);
-        SustainOff(InputSource.Playback);
-        SustainOff(InputSource.MidiDevice);
-        PanicAllNotesOff();
+        lock (_lock)
+        {
+            foreach (InputSource source in _allSources)
+            {
+                SustainOff(source);
+            }
+            PanicAllNotesOff();
+        }
         PanicRaised?.Invoke();
     }
 
     private void PanicAllNotesOff()
     {
-        if (_userActiveNotes.Count == 0 && _playerActiveNotes.Count == 0 && _midiDeviceActiveNotes.Count == 0)
+        bool anyActive = _allSources.Any(source => _activeNotesBySource[source].Count > 0);
+        if (!anyActive)
         {
             return;
         }
 
+        foreach (InputSource source in _allSources)
+        {
+            _activeNotesBySource[source].Clear();
+        }
+
         _logger.LogInformation("All notes off (panic)");
-        _userActiveNotes.Clear();
-        _playerActiveNotes.Clear();
-        _midiDeviceActiveNotes.Clear();
 
         for (ushort pitch = NotePitch.MinValue; pitch <= NotePitch.MaxValue; pitch++)
         {
@@ -204,11 +204,14 @@ public class PianoEngine : IPianoEngine
 
     private void OnPianoConfigChanged(PianoConfig newConfig)
     {
-        if (newConfig.Transpose != _lastPianoConfig.Transpose)
+        lock (_lock)
         {
-            PanicAllNotesOff();
+            if (newConfig.Transpose != _lastPianoConfig.Transpose)
+            {
+                PanicAllNotesOff();
+            }
+            _lastPianoConfig = newConfig;
         }
-        _lastPianoConfig = newConfig;
     }
 
     private void NotifyHandlers(Action<INoteEventHandler> action)
@@ -219,14 +222,7 @@ public class PianoEngine : IPianoEngine
         }
     }
 
-    private Dictionary<NotePitch, int> GetActiveNotes(InputSource source) => source switch
-    {
-        InputSource.User => _userActiveNotes,
-        InputSource.Playback => _playerActiveNotes,
-        InputSource.MidiDevice => _midiDeviceActiveNotes,
-        _ => throw new ArgumentOutOfRangeException(nameof(source), source, "Unknown input source"),
-    };
+    private Dictionary<NotePitch, int> GetActiveNotes(InputSource source) => _activeNotesBySource[source];
 
-    private bool IsNoteActive(NotePitch pitch) =>
-        _userActiveNotes.ContainsKey(pitch) || _playerActiveNotes.ContainsKey(pitch);
+    private bool IsNoteActive(NotePitch pitch) => _allSources.Any(source => _activeNotesBySource[source].ContainsKey(pitch));
 }
